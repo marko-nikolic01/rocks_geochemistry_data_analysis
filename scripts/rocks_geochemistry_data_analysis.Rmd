@@ -161,3 +161,20 @@ cleaned_data$TECTONIC.SETTING <- as.factor(cleaned_data$TECTONIC.SETTING)
 levels(cleaned_data$TECTONIC.SETTING)
 ```
 
+5.  Čišćenje podataka. Ostale kolone pretvoriti u numeričke, po prirodi obeležja koja govore koliki deo stene je određeni hemijski element ili koliko čestica tog elementa je prisutno, potrebno je izbaciti redove gde se javljaju negativne vrednosti. Takođe, za obeležja koja govore u procentima (udeo određenog oksida) potrebno je izbaciti redove gde se javljaju vrednosti veće od 100.
+
+```{r}
+numeric_columns <- c(oxide_columns, trace_element_columns)
+cleaned_data[numeric_columns] <- lapply(cleaned_data[numeric_columns], as.numeric)
+
+bad_values_indicies <- which(apply(cleaned_data[oxide_columns], 1, function(r) any(r > 100, na.rm = TRUE)))
+length(bad_values_indicies)
+cleaned_data <- cleaned_data[-bad_values_indicies, ]
+
+bad_values_indicies <- which(apply(cleaned_data[numeric_columns], 1, function(r) any(r < 0, na.rm = TRUE)))
+length(bad_values_indicies)
+cleaned_data <- cleaned_data[-bad_values_indicies, ]
+
+```
+
+
