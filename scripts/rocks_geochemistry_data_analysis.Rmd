@@ -147,3 +147,17 @@ selected_columns <- c(target_column, oxide_columns, trace_element_columns)
 cleaned_data <- raw_data[, selected_columns]
 ```
 
+4.  Čišćenje podataka. Za kategoričko obeležje TECTONIC.SETTING uočeno je da postoje redovi gde je vrednost prazan string, ove redove izbacujemo. Takođe, iako je vrednost TECTONIC.SETTING u većini redova napisana velikim slovima, u pojedinim su yaostala mala slova pa je potrebno normalizovati.
+
+```{r}
+cleaned_data$TECTONIC.SETTING <- as.factor(cleaned_data$TECTONIC.SETTING)
+levels(cleaned_data$TECTONIC.SETTING)
+
+cleaned_data <- filter(cleaned_data, !is.na(TECTONIC.SETTING))
+cleaned_data <- filter(cleaned_data, TECTONIC.SETTING != "")
+cleaned_data$TECTONIC.SETTING <- toupper(cleaned_data$TECTONIC.SETTING)
+
+cleaned_data$TECTONIC.SETTING <- as.factor(cleaned_data$TECTONIC.SETTING)
+levels(cleaned_data$TECTONIC.SETTING)
+```
+
