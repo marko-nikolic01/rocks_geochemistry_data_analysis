@@ -177,4 +177,25 @@ cleaned_data <- cleaned_data[-bad_values_indicies, ]
 
 ```
 
+6.  Ispitivanje prisustva nedostajućih vrednost. Obeležje TECTONIC.SETTING je već očišćeno od nedostajućih vrednosti koja su se javljala u obliku praznog stringa. Ostala obeležja imaju varirajući procenat nedostajućih vrednosti (10-100%).
 
+```{r, fig.width=20, fig.height=40}
+missing_values_stats <- colMeans(is.na(cleaned_data)) * 100
+missing_values_stats <- sort(missing_values_stats, decreasing = FALSE)
+
+missing_values_stats.names <- names(missing_values_stats)
+missing_values_stats.names <- gsub("\\.WT|\\.PPM", "", missing_values_stats.names)
+
+dev.new(width = 12, height = 20)
+dotchart(
+  missing_values_stats,
+  labels = ifelse(
+    nchar(missing_values_stats.names) > 25,
+    paste0(strtrim(missing_values_stats.names, 25), "..."),
+    missing_values_stats.names
+  ),
+  main = "Procenat nedostajućih vrednosti po obeležjima",
+  xlab = "Procenat NA (%)",
+  cex = 2
+)
+```
