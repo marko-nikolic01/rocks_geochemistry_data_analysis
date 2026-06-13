@@ -4,3 +4,14 @@ author: "Marko Nikolić E2 47\2024"
 output: html_document
 ---
 
+## Priprema podataka
+
+U ovoj sekciji, prikazano je učitavanje i čišćenje podataka:
+
+1.  Za početak navodimo sve potrebne pakete i pozicioniramo se u željeni direktorijum.
+
+```{r}
+library(tidyverse)
+```
+
+
