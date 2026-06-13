@@ -198,3 +198,18 @@ dotchart(
   cex = 2
 )
 ```
+
+7.  Ispitivanje prisustva nedostajućih vrednost. Ukoliko je potrebno ovde se može videti koliko vrednosti fali za svaki hemijski element grupisano po tektonskoj sredini.
+
+```{r}
+missing_values_stats_by_tectonic_setting <- sapply(features, function(c) {
+  tapply(
+    is.na(cleaned_data[[c]]),
+    cleaned_data$TECTONIC.SETTING,
+    mean
+  )
+}) * 100
+missing_values_stats_by_tectonic_setting <- t(na_table)
+missing_values_stats_by_tectonic_setting
+```
+
