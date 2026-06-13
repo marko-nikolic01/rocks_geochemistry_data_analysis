@@ -186,7 +186,6 @@ missing_values_stats <- sort(missing_values_stats, decreasing = FALSE)
 missing_values_stats.names <- names(missing_values_stats)
 missing_values_stats.names <- gsub("\\.WT|\\.PPM", "", missing_values_stats.names)
 
-dev.new(width = 12, height = 20)
 dotchart(
   missing_values_stats,
   labels = ifelse(
