@@ -14,4 +14,14 @@ U ovoj sekciji, prikazano je učitavanje i čišćenje podataka:
 library(tidyverse)
 ```
 
+2.  Učitavamo podatke iz fajlova. Dataset je razbijen na desetine fajlova i potrebno je podatke objediniti.
+
+```{r}
+files <- list.files("../data/rocks", recursive = TRUE, full.names = TRUE)
+files <- files[grepl("\\.csv$", files)]
+
+raw_data_parts <- lapply(files, read.csv)
+raw_data <- do.call(rbind, raw_data_parts)
+names(raw_data) <- sub("\\.+$", "", names(raw_data))
+```
 
