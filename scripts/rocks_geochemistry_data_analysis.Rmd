@@ -1,0 +1,6 @@
+---
+title: "Analiza geohemijskog sastava stena"
+author: "Marko Nikolić E2 47\2024"
+output: html_document
+---
+
