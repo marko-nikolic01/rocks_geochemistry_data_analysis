@@ -37,7 +37,6 @@ oxide_columns <- c(
   "CR2O3.WT",
   "FE2O3.WT",
   "FEO.WT",
-  "FEOT.WT",
   "CAO.WT",
   "MGO.WT",
   "MNO.WT",
@@ -46,9 +45,6 @@ oxide_columns <- c(
   "NA2O.WT",
   "P2O5.WT",
   "H2O.WT",
-  "H2OP.WT",
-  "H2OM.WT",
-  "H2OT.WT",
   "CO2.WT",
   "CO1.WT",
   "F.WT",
@@ -60,10 +56,7 @@ oxide_columns <- c(
   "SO3.WT",
   "SO4.WT",
   "S.WT",
-  "LOI.WT",
-  "VOLATILES.WT",
-  "O.WT",
-  "OTHERS.WT"
+  "O.WT"
 )
 trace_element_columns <- c(
   "LI.PPM",
@@ -161,17 +154,21 @@ cleaned_data$TECTONIC.SETTING <- as.factor(cleaned_data$TECTONIC.SETTING)
 levels(cleaned_data$TECTONIC.SETTING)
 ```
 
-5.  Čišćenje podataka. Ostale kolone pretvoriti u numeričke, po prirodi obeležja koja govore koliki deo stene je određeni hemijski element ili koliko čestica tog elementa je prisutno, potrebno je izbaciti redove gde se javljaju negativne vrednosti. Takođe, za obeležja koja govore u procentima (udeo određenog oksida) potrebno je izbaciti redove gde se javljaju vrednosti veće od 100.
+5.  Čišćenje podataka. Ostale kolone pretvoriti u numeričke, po prirodi obeležja koja govore koliki deo stene je određeni hemijski element ili koliko čestica tog elementa je prisutno, potrebno je izbaciti redove gde se javljaju negativne vrednosti. Takođe, za obeležja koja govore u procentima (udeo određenog oksida) potrebno je izbaciti redove gde se javljaju vrednosti veće od 100. Takođe, potrebno je izbaciti redove gde je zbir procentualnih udela oksida veći od 100.
 
 ```{r}
-numeric_columns <- c(oxide_columns, trace_element_columns)
-cleaned_data[numeric_columns] <- lapply(cleaned_data[numeric_columns], as.numeric)
+chemical_columns <- c(oxide_columns, trace_element_columns)
+cleaned_data[chemical_columns] <- lapply(cleaned_data[chemical_columns], as.numeric)
 
 bad_values_indicies <- which(apply(cleaned_data[oxide_columns], 1, function(r) any(r > 100, na.rm = TRUE)))
 length(bad_values_indicies)
 cleaned_data <- cleaned_data[-bad_values_indicies, ]
 
-bad_values_indicies <- which(apply(cleaned_data[numeric_columns], 1, function(r) any(r < 0, na.rm = TRUE)))
+bad_values_indicies <- which(apply(cleaned_data[chemical_columns], 1, function(r) any(r < 0, na.rm = TRUE)))
+length(bad_values_indicies)
+cleaned_data <- cleaned_data[-bad_values_indicies, ]
+
+bad_values_indicies <- which(rowSums(cleaned_data[oxide_columns], na.rm = TRUE) > 100)
 length(bad_values_indicies)
 cleaned_data <- cleaned_data[-bad_values_indicies, ]
 ```
@@ -201,21 +198,43 @@ dotchart(
 7.  Ispitivanje prisustva nedostajućih vrednost. Ukoliko je potrebno ovde se može videti koliko vrednosti fali za svaki hemijski element grupisano po tektonskoj sredini.
 
 ```{r}
-missing_values_stats_by_tectonic_setting <- sapply(features, function(c) {
+missing_values_stats_by_tectonic_setting <- sapply(chemical_columns, function(c) {
   tapply(
     is.na(cleaned_data[[c]]),
     cleaned_data$TECTONIC.SETTING,
     mean
   )
 }) * 100
-missing_values_stats_by_tectonic_setting <- t(na_table)
+
+missing_values_stats_by_tectonic_setting <- t(missing_values_stats_by_tectonic_setting)
 missing_values_stats_by_tectonic_setting
 ```
 
-## Priprema podataka
+## Preliminarna analiza podataka
 
+U ovoj sekciji, prikazana je preliminarna analiza podataka:
 
+1. Izračunavanje vrednosti deskriptivnih statistika po obeležjima i vizualizovanje raspodele. Centralno obeležje skupa je kategoričko obeležje TECTONIC.SETTING koje sadrži informacije o pripadnosti stene određenom tektonskom okruženju. U skupu podataka je prisutno 11 različitih okruženja, a sve nedostajuće vrednosti su oćišćene iz skupa podataka.
 
+```{r, fig.width=10, fig.height=6}
+tectonic_setting_data <- table(cleaned_data$TECTONIC.SETTING) / nrow(cleaned_data)
+colors <- rainbow(length(tectonic_setting_data))
+
+pie(
+  tectonic_setting_data,
+  col = colors,
+  labels = NA,
+  main = "Procentualna raspodela tektonskih okruženja"
+)
+
+legend(
+  "topleft",
+  legend = paste0(names(tectonic_setting_data), " (", round(100 * tectonic_setting_data / sum(tectonic_setting_data), 1), "%)"),
+  fill = colors,
+  cex = 0.7,
+  bty = "n"
+)
+```
 
 
 
