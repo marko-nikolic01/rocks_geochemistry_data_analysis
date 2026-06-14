@@ -236,6 +236,20 @@ legend(
 )
 ```
 
+```{r, fig.width=10, fig.height=6}
+tectonic_setting_data <- table(cleaned_data$TECTONIC.SETTING)
+tectonic_setting_data <- sort(tectonic_setting_data, decreasing = FALSE)
+
+labels <- names(tectonic_setting_data)
+
+dotchart(
+  tectonic_counts,
+  labels = labels,
+  main = "Broj uzoraka po tektonskom okruženju",
+  xlab = "Broj uzoraka",
+  cex = 1
+)
+```
 
 
 
