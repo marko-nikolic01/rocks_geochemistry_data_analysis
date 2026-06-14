@@ -280,6 +280,32 @@ pie(
 )
 ```
 
+```{r, fig.width=10, fig.height=5}
+missing_value_counts <- table(cleaned_data$TECTONIC.SETTING, is.na(cleaned_data[[chemical_column]]))
+missing_value_counts <- prop.table(missing_value_counts, 1)
+rownames(missing_value_counts) <- ifelse(
+  nchar(rownames(missing_value_counts)) > 12,
+  paste0(substr(rownames(missing_value_counts), 1, 12), "..."),
+  rownames(missing_value_counts)
+)
+missing_value_counts <- t(missing_value_counts)
+
+labels <- c("NOT NA", "NA")
+colors <- c("green", "red")
+
+barplot(
+  missing_value_counts,
+  col = colors,
+  legend = labels,
+  beside = FALSE,
+  las = 2,
+  cex.names = 0.625,
+  main = paste("NA distribucija po tektonskim okruženjima - ", chemical_column),
+  ylab = "Broj uzoraka"
+)
+```
+
+
 
 
 
