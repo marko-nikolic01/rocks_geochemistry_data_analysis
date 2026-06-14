@@ -391,9 +391,28 @@ hist(cleaned_data[[chemical_column]],
      ylab = "Broj pojava",
      ylim = c(0, max(h$counts) * 1.2)
     )
+
+cor(cleaned_data$SIO2.WT,
+    cleaned_data$MGO.WT,
+    use = "complete.obs")
 ```
 
+3. Ispitivanje odnosa između obeležja. Ispod su prikazane mere korelacije između svih obeležja sortirane od većih ka manjim.
 
+```{r, fig.width=10, fig.height=5}
+corelations <- cor(cleaned_data[chemical_columns], use = "pairwise.complete.obs")
+corelations <- as.data.frame(as.table(corelations))
+corelations <- corelations[corelations$Var1 != corelations$Var2, ]
+
+corelations$key <- apply(corelations[, 1:2], 1, function(x) paste(sort(x), collapse = "_"))
+corelations <- corelations[!duplicated(corelations$key), ]
+corelations$key <- NULL
+
+corelations <- corelations[order(abs(corelations$Freq), decreasing = TRUE), ]
+
+colnames(corelations) <- c("Obeležje 1", "Obeležje 2", "Korelacija")
+corelations
+```
 
 
 
