@@ -251,6 +251,14 @@ dotchart(
 )
 ```
 
+```{r, fig.width=10, fig.height=6}
+tectonic_setting_data <- as.data.frame(tectonic_setting_data)
+colnames(tectonic_setting_data) <- c("TECTONIC.SETTING", "COUNT")
+
+tectonic_setting_data$PERCENT <- round(tectonic_setting_data$COUNT / sum(tectonic_setting_data$COUNT) * 100, 2)
+tectonic_setting_data <- tectonic_setting_data[order(tectonic_setting_data$COUNT), ]
+tectonic_setting_data
+```
 
 
 
