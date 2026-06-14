@@ -335,6 +335,18 @@ chemical_data_summary <- chemical_data %>%
 chemical_data_summary
 ```
 
+```{r, fig.width=10, fig.height=5}
+chemical_data <- cleaned_data[[chemical_column]]
+
+boxplot(
+  chemical_data,
+  main = chemical_column,
+  xlab = NA,
+  ylab = chemical_column,
+  las = 2,
+  cex.axis = 0.625
+)
+```
 
 
 
