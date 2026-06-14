@@ -305,6 +305,18 @@ barplot(
 )
 ```
 
+```{r}
+chemical_data <- cleaned_data[[chemical_column]]
+
+chemical_data_summary <- data.frame(
+  min = min(chemical_data, na.rm = TRUE),
+  max = max(chemical_data, na.rm = TRUE),
+  mean = mean(chemical_data, na.rm = TRUE),
+  sd = sd(chemical_data, na.rm = TRUE),
+  median = median(chemical_data, na.rm = TRUE)
+)
+chemical_data_summary
+```
 
 
 
