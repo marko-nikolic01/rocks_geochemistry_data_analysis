@@ -348,6 +348,28 @@ boxplot(
 )
 ```
 
+```{r, fig.width=10, fig.height=5}
+chemical_data <- select(cleaned_data, TECTONIC.SETTING, all_of(chemical_column))
+chemical_data <- mutate(
+    chemical_data,
+    TECTONIC.SETTING = ifelse(
+      nchar(as.character(TECTONIC.SETTING)) > 12,
+      paste0(substr(as.character(TECTONIC.SETTING), 1, 12), "..."),
+      as.character(TECTONIC.SETTING)
+    )
+  )
+
+boxplot(
+  chemical_data[[chemical_column]] ~ chemical_data$TECTONIC.SETTING,
+  main = chemical_column,
+  xlab = NA,
+  ylab = chemical_column,
+  las = 2,
+  cex.axis = 0.625
+)
+```
+
+
 
 
 
