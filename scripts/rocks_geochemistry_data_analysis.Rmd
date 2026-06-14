@@ -318,6 +318,24 @@ chemical_data_summary <- data.frame(
 chemical_data_summary
 ```
 
+```{r}
+chemical_data <- select(cleaned_data, TECTONIC.SETTING, all_of(chemical_column))
+
+chemical_data_summary <- chemical_data %>%
+  group_by(TECTONIC.SETTING) %>%
+  summarise(
+    min = min(.data[[chemical_column]], na.rm = TRUE),
+    max = max(.data[[chemical_column]], na.rm = TRUE),
+    mean = mean(.data[[chemical_column]], na.rm = TRUE),
+    sd = sd(.data[[chemical_column]], na.rm = TRUE),
+    median = median(.data[[chemical_column]], na.rm = TRUE),
+    .groups = "drop"
+  )
+
+chemical_data_summary
+```
+
+
 
 
 
