@@ -369,7 +369,16 @@ boxplot(
 )
 ```
 
+```{r, fig.width=10, fig.height=5}
+h <- hist(cleaned_data[[chemical_column]], plot = FALSE)
 
+hist(cleaned_data[[chemical_column]],
+     main = chemical_column,
+     xlab = chemical_column,
+     ylab = "Broj pojava",
+     ylim = c(0, max(h$counts) * 1.2)
+    )
+```
 
 
 
