@@ -266,6 +266,19 @@ tectonic_setting_data
 chemical_column <- "SIO2.WT"
 ```
 
+```{r, fig.width=10, fig.height=6}
+missing_values_counts <- table(is.na(cleaned_data[[chemical_column]]))
+
+labels <- c("NOT NA", "NA")
+colors <- c("green", "red")
+
+pie(
+  missing_values_counts,
+  labels = paste(labels, " (", round(100 * missing_values_counts / sum(missing_values_counts), 2), "%)"),
+  col = colors,
+  main = paste("NA vs NOT NA - ", chemical_column)
+)
+```
 
 
 
