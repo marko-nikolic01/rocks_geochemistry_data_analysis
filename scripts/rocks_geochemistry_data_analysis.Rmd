@@ -305,6 +305,19 @@ barplot(
 )
 ```
 
+```{r, fig.width=10, fig.height=5}
+chemical_data <- tapply(cleaned_data[[chemical_column]], cleaned_data$TECTONIC.SETTING, function(x) sum(!is.na(x)))
+chemical_data <- sort(chemical_data, decreasing = FALSE)
+
+dotchart(
+  chemical_data,
+  labels = names(chemical_data),
+  main = paste("Broj uzoraka - ", chemical_column),
+  xlab = "Broj uzoraka",
+  cex = 0.9
+)
+```
+
 ```{r}
 chemical_data <- cleaned_data[[chemical_column]]
 
