@@ -147,7 +147,7 @@ selected_columns <- c(target_column, oxide_columns, trace_element_columns)
 cleaned_data <- raw_data[, selected_columns]
 ```
 
-4.  Čišćenje podataka. Za kategoričko obeležje TECTONIC.SETTING uočeno je da postoje redovi gde je vrednost prazan string, ove redove izbacujemo. Takođe, iako je vrednost TECTONIC.SETTING u većini redova napisana velikim slovima, u pojedinim su yaostala mala slova pa je potrebno normalizovati.
+4.  Čišćenje podataka. Za kategoričko obeležje TECTONIC.SETTING uočeno je da postoje redovi gde je vrednost prazan string, ove redove izbacujemo. Takođe, iako je vrednost TECTONIC.SETTING u većini redova napisana velikim slovima, u pojedinim su zaostala mala slova pa je potrebno normalizovati.
 
 ```{r}
 cleaned_data$TECTONIC.SETTING <- as.factor(cleaned_data$TECTONIC.SETTING)
@@ -174,7 +174,6 @@ cleaned_data <- cleaned_data[-bad_values_indicies, ]
 bad_values_indicies <- which(apply(cleaned_data[numeric_columns], 1, function(r) any(r < 0, na.rm = TRUE)))
 length(bad_values_indicies)
 cleaned_data <- cleaned_data[-bad_values_indicies, ]
-
 ```
 
 6.  Ispitivanje prisustva nedostajućih vrednost. Obeležje TECTONIC.SETTING je već očišćeno od nedostajućih vrednosti koja su se javljala u obliku praznog stringa. Ostala obeležja imaju varirajući procenat nedostajućih vrednosti (10-100%).
@@ -212,4 +211,17 @@ missing_values_stats_by_tectonic_setting <- sapply(features, function(c) {
 missing_values_stats_by_tectonic_setting <- t(na_table)
 missing_values_stats_by_tectonic_setting
 ```
+
+## Priprema podataka
+
+
+
+
+
+
+
+
+
+
+
 
