@@ -414,6 +414,16 @@ colnames(corelations) <- c("Obeležje 1", "Obeležje 2", "Korelacija")
 corelations
 ```
 
+```{r, fig.width=10, fig.height=5}
+chemical_column_1 <- "SIO2.WT"
+chemical_column_2 <- "AL2O3.WT"
+
+filter(
+  corelations,
+  (`Obeležje 1` == chemical_column_1 & `Obeležje 2` == chemical_column_2) |
+  (`Obeležje 1` == chemical_column_2 & `Obeležje 2` == chemical_column_1)
+)
+```
 
 
 
