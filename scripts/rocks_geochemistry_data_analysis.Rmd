@@ -260,6 +260,18 @@ tectonic_setting_data <- tectonic_setting_data[order(tectonic_setting_data$COUNT
 tectonic_setting_data
 ```
 
+2. Izračunavanje vrednosti deskriptivnih statistika po obeležjima i vizualizovanje raspodele. Ostala obeležja sadrže podatke o sadržaju pojedinačkih hemijskih jedinjenja (u procentima za okside i u broju čestica za ostale). Broj ovih obeležja je velik, a za klasifikacione modele su korišćeni različiti podskupovi. Ispod su prikazani detalji o pojedinačnim obeležjima, kao i detalji o istim obeležjima grupisanim po tektonskom okruženju.
+
+```{r}
+chemical_column <- "SIO2.WT"
+```
+
+
+
+
+
+
+
 
 
 
