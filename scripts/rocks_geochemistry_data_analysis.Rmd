@@ -237,9 +237,31 @@ Preliminarna analiza podataka
 
 U ovoj sekciji, prikazana je preliminarna analiza podataka:
 
+Izračunavanje vrednosti deskriptivnih statistika po obeležjima i vizualizovanje raspodele. Centralno obeležje skupa je kategoričko obeležje LAND.OR.SEA koje sadrži informacije o pripadnosti stene određenom tektonskom okruženju. U skupu podataka je prisutno 11 različitih okruženja, a sve nedostajuće vrednosti su oćišćene iz skupa podataka.
+
+```{r, fig.width=10, fig.height=6}
+tectonic_setting_data <- table(cleaned_data$LAND.OR.SEA) / nrow(cleaned_data)
+colors <- c("brown", "cyan")
+
+pie(
+  tectonic_setting_data,
+  col = colors,
+  labels = NA,
+  main = "Procentualna raspodela tektonskih okruženja"
+)
+
+legend(
+  "topleft",
+  legend = paste0(names(tectonic_setting_data), " (", round(100 * tectonic_setting_data / sum(tectonic_setting_data), 1), "%)"),
+  fill = colors,
+  cex = 0.7,
+  bty = "n"
+)
+```
+
 Izračunavanje vrednosti deskriptivnih statistika po obeležjima i vizualizovanje raspodele. Centralno obeležje skupa je kategoričko obeležje TECTONIC.SETTING koje sadrži informacije o pripadnosti stene određenom tektonskom okruženju. U skupu podataka je prisutno 11 različitih okruženja, a sve nedostajuće vrednosti su oćišćene iz skupa podataka.
 
-{r, fig.width=10, fig.height=6}
+```{r, fig.width=10, fig.height=6}
 tectonic_setting_data <- table(cleaned_data$TECTONIC.SETTING) / nrow(cleaned_data)
 colors <- rainbow(length(tectonic_setting_data))
 
@@ -257,28 +279,31 @@ legend(
   cex = 0.7,
   bty = "n"
 )
+```
 
-{r, fig.width=10, fig.height=6}
+```{r, fig.width=10, fig.height=6}
 tectonic_setting_data <- table(cleaned_data$TECTONIC.SETTING)
 tectonic_setting_data <- sort(tectonic_setting_data, decreasing = FALSE)
 
 labels <- names(tectonic_setting_data)
 
 dotchart(
-  tectonic_counts,
+  tectonic_setting_data,
   labels = labels,
   main = "Broj uzoraka po tektonskom okruženju",
   xlab = "Broj uzoraka",
   cex = 1
 )
+```
 
-{r, fig.width=10, fig.height=6}
+```{r, fig.width=10, fig.height=6}
 tectonic_setting_data <- as.data.frame(tectonic_setting_data)
 colnames(tectonic_setting_data) <- c("TECTONIC.SETTING", "COUNT")
 
 tectonic_setting_data$PERCENT <- round(tectonic_setting_data$COUNT / sum(tectonic_setting_data$COUNT) * 100, 2)
 tectonic_setting_data <- tectonic_setting_data[order(tectonic_setting_data$COUNT), ]
 tectonic_setting_data
+```
 
 Izračunavanje vrednosti deskriptivnih statistika po obeležjima i vizualizovanje raspodele. Ostala obeležja sadrže podatke o sadržaju pojedinačkih hemijskih jedinjenja (u procentima za okside i u broju čestica za ostale). Broj ovih obeležja je velik, a za klasifikacione modele su korišćeni različiti podskupovi. Ispod su prikazani detalji o pojedinačnim obeležjima, kao i detalji o istim obeležjima grupisanim po tektonskom okruženju.
 
