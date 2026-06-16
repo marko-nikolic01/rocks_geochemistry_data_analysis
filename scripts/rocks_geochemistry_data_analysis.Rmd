@@ -258,6 +258,15 @@ legend(
   bty = "n"
 )
 ```
+```{r, fig.width=10, fig.height=6}
+tectonic_setting_data <- table(cleaned_data$LAND.OR.SEA)
+tectonic_setting_data <- as.data.frame(tectonic_setting_data)
+colnames(tectonic_setting_data) <- c("LAND.OR.SEA", "COUNT")
+
+tectonic_setting_data$PERCENT <- round(tectonic_setting_data$COUNT / sum(tectonic_setting_data$COUNT) * 100, 2)
+tectonic_setting_data <- tectonic_setting_data[order(tectonic_setting_data$COUNT), ]
+tectonic_setting_data
+```
 
 Izračunavanje vrednosti deskriptivnih statistika po obeležjima i vizualizovanje raspodele. Centralno obeležje skupa je kategoričko obeležje TECTONIC.SETTING koje sadrži informacije o pripadnosti stene određenom tektonskom okruženju. U skupu podataka je prisutno 11 različitih okruženja, a sve nedostajuće vrednosti su oćišćene iz skupa podataka.
 
@@ -280,6 +289,8 @@ legend(
   bty = "n"
 )
 ```
+
+
 
 ```{r, fig.width=10, fig.height=6}
 tectonic_setting_data <- table(cleaned_data$TECTONIC.SETTING)
@@ -307,10 +318,11 @@ tectonic_setting_data
 
 Izračunavanje vrednosti deskriptivnih statistika po obeležjima i vizualizovanje raspodele. Ostala obeležja sadrže podatke o sadržaju pojedinačkih hemijskih jedinjenja (u procentima za okside i u broju čestica za ostale). Broj ovih obeležja je velik, a za klasifikacione modele su korišćeni različiti podskupovi. Ispod su prikazani detalji o pojedinačnim obeležjima, kao i detalji o istim obeležjima grupisanim po tektonskom okruženju.
 
-{r}
+```{r}
 chemical_column <- "SIO2.WT"
+```
 
-{r, fig.width=10, fig.height=6}
+```{r, fig.width=10, fig.height=6}
 missing_values_counts <- table(is.na(cleaned_data[[chemical_column]]))
 
 labels <- c("NOT NA", "NA")
@@ -322,8 +334,34 @@ pie(
   col = colors,
   main = paste("NA vs NOT NA - ", chemical_column)
 )
+```
+```{r, fig.width=10, fig.height=5}
+missing_value_counts <- table(cleaned_data$LAND.OR.SEA, is.na(cleaned_data[[chemical_column]]))
+missing_value_counts <- prop.table(missing_value_counts, 1)
+rownames(missing_value_counts) <- ifelse(
+  nchar(rownames(missing_value_counts)) > 12,
+  paste0(substr(rownames(missing_value_counts), 1, 12), "..."),
+  rownames(missing_value_counts)
+)
+missing_value_counts <- t(missing_value_counts)
 
-{r, fig.width=10, fig.height=5}
+labels <- c("NOT NA", "NA")
+colors <- c("green", "red")
+
+barplot(
+  missing_value_counts,
+  col = colors,
+  legend = labels,
+  beside = FALSE,
+  las = 2,
+  cex.names = 0.625,
+  main = paste("NA distribucija po tektonskim okruženjima - ", chemical_column),
+  ylab = "Broj uzoraka"
+)
+```
+
+
+```{r, fig.width=10, fig.height=5}
 missing_value_counts <- table(cleaned_data$TECTONIC.SETTING, is.na(cleaned_data[[chemical_column]]))
 missing_value_counts <- prop.table(missing_value_counts, 1)
 rownames(missing_value_counts) <- ifelse(
@@ -346,8 +384,14 @@ barplot(
   main = paste("NA distribucija po tektonskim okruženjima - ", chemical_column),
   ylab = "Broj uzoraka"
 )
+```
 
-{r, fig.width=10, fig.height=5}
+```{r, fig.width=10, fig.height=5}
+chemical_data <- tapply(cleaned_data[[chemical_column]], cleaned_data$LAND.OR.SEA, function(x) sum(!is.na(x)))
+chemical_data
+```
+
+```{r, fig.width=10, fig.height=5}
 chemical_data <- tapply(cleaned_data[[chemical_column]], cleaned_data$TECTONIC.SETTING, function(x) sum(!is.na(x)))
 chemical_data <- sort(chemical_data, decreasing = FALSE)
 
@@ -358,8 +402,9 @@ dotchart(
   xlab = "Broj uzoraka",
   cex = 0.9
 )
+```
 
-{r}
+```{r}
 chemical_data <- cleaned_data[[chemical_column]]
 
 chemical_data_summary <- data.frame(
@@ -370,8 +415,26 @@ chemical_data_summary <- data.frame(
   median = median(chemical_data, na.rm = TRUE)
 )
 chemical_data_summary
+```
 
-{r}
+```{r}
+chemical_data <- select(cleaned_data, LAND.OR.SEA, all_of(chemical_column))
+
+chemical_data_summary <- chemical_data %>%
+  group_by(LAND.OR.SEA) %>%
+  summarise(
+    min = min(.data[[chemical_column]], na.rm = TRUE),
+    max = max(.data[[chemical_column]], na.rm = TRUE),
+    mean = mean(.data[[chemical_column]], na.rm = TRUE),
+    sd = sd(.data[[chemical_column]], na.rm = TRUE),
+    median = median(.data[[chemical_column]], na.rm = TRUE),
+    .groups = "drop"
+  )
+
+chemical_data_summary
+```
+
+```{r}
 chemical_data <- select(cleaned_data, TECTONIC.SETTING, all_of(chemical_column))
 
 chemical_data_summary <- chemical_data %>%
@@ -386,8 +449,9 @@ chemical_data_summary <- chemical_data %>%
   )
 
 chemical_data_summary
+```
 
-{r, fig.width=10, fig.height=5}
+```{r, fig.width=10, fig.height=5}
 chemical_data <- cleaned_data[[chemical_column]]
 
 boxplot(
@@ -398,8 +462,30 @@ boxplot(
   las = 2,
   cex.axis = 0.625
 )
+```
 
-{r, fig.width=10, fig.height=5}
+```{r, fig.width=10, fig.height=5}
+chemical_data <- select(cleaned_data, LAND.OR.SEA, all_of(chemical_column))
+chemical_data <- mutate(
+    chemical_data,
+    LAND.OR.SEA = ifelse(
+      nchar(as.character(LAND.OR.SEA)) > 12,
+      paste0(substr(as.character(LAND.OR.SEA), 1, 12), "..."),
+      as.character(LAND.OR.SEA)
+    )
+  )
+
+boxplot(
+  chemical_data[[chemical_column]] ~ chemical_data$LAND.OR.SEA,
+  main = chemical_column,
+  xlab = NA,
+  ylab = chemical_column,
+  las = 2,
+  cex.axis = 0.625
+)
+```
+
+```{r, fig.width=10, fig.height=5}
 chemical_data <- select(cleaned_data, TECTONIC.SETTING, all_of(chemical_column))
 chemical_data <- mutate(
     chemical_data,
@@ -418,8 +504,9 @@ boxplot(
   las = 2,
   cex.axis = 0.625
 )
+```
 
-{r, fig.width=10, fig.height=5}
+```{r, fig.width=10, fig.height=5}
 h <- hist(cleaned_data[[chemical_column]], plot = FALSE)
 
 hist(cleaned_data[[chemical_column]],
@@ -432,10 +519,11 @@ hist(cleaned_data[[chemical_column]],
 cor(cleaned_data$SIO2.WT,
     cleaned_data$MGO.WT,
     use = "complete.obs")
+```
 
 Ispitivanje odnosa između obeležja. Ispod su prikazane mere korelacije između svih obeležja sortirane od većih ka manjim.
 
-{r, fig.width=10, fig.height=5}
+```{r, fig.width=10, fig.height=5}
 corelations <- cor(cleaned_data[chemical_columns], use = "pairwise.complete.obs")
 corelations <- as.data.frame(as.table(corelations))
 corelations <- corelations[corelations$Var1 != corelations$Var2, ]
@@ -448,8 +536,9 @@ corelations <- corelations[order(abs(corelations$Freq), decreasing = TRUE), ]
 
 colnames(corelations) <- c("Obeležje 1", "Obeležje 2", "Korelacija")
 corelations
+```
 
-{r, fig.width=10, fig.height=5}
+```{r, fig.width=10, fig.height=5}
 chemical_column_1 <- "SIO2.WT"
 chemical_column_2 <- "AL2O3.WT"
 
@@ -458,6 +547,7 @@ filter(
   (`Obeležje 1` == chemical_column_1 & `Obeležje 2` == chemical_column_2) |
   (`Obeležje 1` == chemical_column_2 & `Obeležje 2` == chemical_column_1)
 )
+```
 
 Klasifikacija
 
