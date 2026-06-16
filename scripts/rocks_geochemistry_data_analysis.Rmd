@@ -4,17 +4,17 @@ author: "Marko Nikolić E2 47\2024"
 output: html_document
 ---
 
-## Priprema podataka
+Priprema podataka
 
 U ovoj sekciji, prikazano je učitavanje i čišćenje podataka:
 
-1.  Za početak navodimo sve potrebne pakete i pozicioniramo se u željeni direktorijum.
+Za početak navodimo sve potrebne pakete i pozicioniramo se u željeni direktorijum.
 
 ```{r}
 library(tidyverse)
 ```
 
-2.  Učitavamo podatke iz fajlova. Dataset je razbijen na desetine fajlova i potrebno je podatke objediniti.
+Učitavamo podatke iz fajlova. Dataset je razbijen na desetine fajlova i potrebno je podatke objediniti.
 
 ```{r}
 files <- list.files("../data/rocks", recursive = TRUE, full.names = TRUE)
@@ -25,10 +25,13 @@ raw_data <- do.call(rbind, raw_data_parts)
 names(raw_data) <- sub("\\.+$", "", names(raw_data))
 ```
 
-3.  Biramo obeležja koja će nam biti potrebna (tektonsko okruženje, sadržaji pojedinačnih oksida, sadržaji pojedinačnih elemenata u tragovima).
+Biramo obeležja koja će nam biti potrebna (tektonsko okruženje, sadržaji pojedinačnih oksida, sadržaji pojedinačnih elemenata u tragovima).
 
 ```{r}
-target_column <- "TECTONIC.SETTING"
+geographical_columns <- c(
+  "LAND.OR.SEA",
+  "TECTONIC.SETTING"
+)
 oxide_columns <- c(
   "SIO2.WT",
   "TIO2.WT",
@@ -135,12 +138,27 @@ trace_element_columns <- c(
   "TH.PPM",
   "U.PPM"
 )
-selected_columns <- c(target_column, oxide_columns, trace_element_columns)
+selected_columns <- c(geographical_columns, oxide_columns, trace_element_columns)
 
 cleaned_data <- raw_data[, selected_columns]
 ```
 
-4.  Čišćenje podataka. Za kategoričko obeležje TECTONIC.SETTING uočeno je da postoje redovi gde je vrednost prazan string, ove redove izbacujemo. Takođe, iako je vrednost TECTONIC.SETTING u većini redova napisana velikim slovima, u pojedinim su zaostala mala slova pa je potrebno normalizovati.
+Čišćenje podataka. Za kategoričko obeležje LAND.OR.SEA uočeno je da iako je vrednost LAND.OR.SEA u većini redova napisana velikim slovima, u pojedinim su zaostala mala slova pa je potrebno normalizovati.
+
+```{r}
+cleaned_data$LAND.OR.SEA <- as.factor(cleaned_data$LAND.OR.SEA)
+levels(cleaned_data$LAND.OR.SEA)
+
+cleaned_data <- filter(cleaned_data, !is.na(LAND.OR.SEA))
+cleaned_data <- filter(cleaned_data, LAND.OR.SEA != "")
+cleaned_data$LAND.OR.SEA <- toupper(cleaned_data$LAND.OR.SEA)
+cleaned_data$LAND.OR.SEA <- ifelse(cleaned_data$LAND.OR.SEA == "SAE", "LAND", "SEA")
+
+cleaned_data$LAND.OR.SEA <- as.factor(cleaned_data$LAND.OR.SEA)
+levels(cleaned_data$LAND.OR.SEA)
+```
+
+Čišćenje podataka. Za kategoričko obeležje TECTONIC.SETTING uočeno je da postoje redovi gde je vrednost prazan string, ove redove izbacujemo. Takođe, iako je vrednost TECTONIC.SETTING u većini redova napisana velikim slovima, u pojedinim su zaostala mala slova pa je potrebno normalizovati.
 
 ```{r}
 cleaned_data$TECTONIC.SETTING <- as.factor(cleaned_data$TECTONIC.SETTING)
@@ -154,7 +172,7 @@ cleaned_data$TECTONIC.SETTING <- as.factor(cleaned_data$TECTONIC.SETTING)
 levels(cleaned_data$TECTONIC.SETTING)
 ```
 
-5.  Čišćenje podataka. Ostale kolone pretvoriti u numeričke, po prirodi obeležja koja govore koliki deo stene je određeni hemijski element ili koliko čestica tog elementa je prisutno, potrebno je izbaciti redove gde se javljaju negativne vrednosti. Takođe, za obeležja koja govore u procentima (udeo određenog oksida) potrebno je izbaciti redove gde se javljaju vrednosti veće od 100. Takođe, potrebno je izbaciti redove gde je zbir procentualnih udela oksida veći od 100.
+Čišćenje podataka. Ostale kolone pretvoriti u numeričke, po prirodi obeležja koja govore koliki deo stene je određeni hemijski element ili koliko čestica tog elementa je prisutno, potrebno je izbaciti redove gde se javljaju negativne vrednosti. Takođe, za obeležja koja govore u procentima (udeo određenog oksida) potrebno je izbaciti redove gde se javljaju vrednosti veće od 100. Takođe, potrebno je izbaciti redove gde je zbir procentualnih udela oksida veći od 100.
 
 ```{r}
 chemical_columns <- c(oxide_columns, trace_element_columns)
@@ -173,29 +191,34 @@ length(bad_values_indicies)
 cleaned_data <- cleaned_data[-bad_values_indicies, ]
 ```
 
-6.  Ispitivanje prisustva nedostajućih vrednost. Obeležje TECTONIC.SETTING je već očišćeno od nedostajućih vrednosti koja su se javljala u obliku praznog stringa. Ostala obeležja imaju varirajući procenat nedostajućih vrednosti (10-100%).
+Ispitivanje prisustva nedostajućih vrednost. Obeležja TECTONIC.SETTING i LAND.OR.SEA su već očišćena od nedostajućih vrednosti koja su se javljala u obliku praznog stringa. Ostala obeležja imaju varirajući procenat nedostajućih vrednosti (10-100%).
 
 ```{r, fig.width=20, fig.height=40}
 missing_values_stats <- colMeans(is.na(cleaned_data)) * 100
 missing_values_stats <- sort(missing_values_stats, decreasing = FALSE)
 
-missing_values_stats.names <- names(missing_values_stats)
-missing_values_stats.names <- gsub("\\.WT|\\.PPM", "", missing_values_stats.names)
-
 dotchart(
   missing_values_stats,
-  labels = ifelse(
-    nchar(missing_values_stats.names) > 25,
-    paste0(strtrim(missing_values_stats.names, 25), "..."),
-    missing_values_stats.names
-  ),
   main = "Procenat nedostajućih vrednosti po obeležjima",
   xlab = "Procenat NA (%)",
   cex = 2
 )
 ```
 
-7.  Ispitivanje prisustva nedostajućih vrednost. Ukoliko je potrebno ovde se može videti koliko vrednosti fali za svaki hemijski element grupisano po tektonskoj sredini.
+Ispitivanje prisustva nedostajućih vrednost. Ukoliko je potrebno ovde se može videti koliko vrednosti fali za svaki hemijski element grupisano po tektonskoj sredini.
+
+```{r}
+missing_values_stats_by_tectonic_setting <- sapply(chemical_columns, function(c) {
+  tapply(
+    is.na(cleaned_data[[c]]),
+    cleaned_data$LAND.OR.SEA,
+    mean
+  )
+}) * 100
+
+missing_values_stats_by_tectonic_setting <- t(missing_values_stats_by_tectonic_setting)
+missing_values_stats_by_tectonic_setting
+```
 
 ```{r}
 missing_values_stats_by_tectonic_setting <- sapply(chemical_columns, function(c) {
@@ -210,13 +233,13 @@ missing_values_stats_by_tectonic_setting <- t(missing_values_stats_by_tectonic_s
 missing_values_stats_by_tectonic_setting
 ```
 
-## Preliminarna analiza podataka
+Preliminarna analiza podataka
 
 U ovoj sekciji, prikazana je preliminarna analiza podataka:
 
-1. Izračunavanje vrednosti deskriptivnih statistika po obeležjima i vizualizovanje raspodele. Centralno obeležje skupa je kategoričko obeležje TECTONIC.SETTING koje sadrži informacije o pripadnosti stene određenom tektonskom okruženju. U skupu podataka je prisutno 11 različitih okruženja, a sve nedostajuće vrednosti su oćišćene iz skupa podataka.
+Izračunavanje vrednosti deskriptivnih statistika po obeležjima i vizualizovanje raspodele. Centralno obeležje skupa je kategoričko obeležje TECTONIC.SETTING koje sadrži informacije o pripadnosti stene određenom tektonskom okruženju. U skupu podataka je prisutno 11 različitih okruženja, a sve nedostajuće vrednosti su oćišćene iz skupa podataka.
 
-```{r, fig.width=10, fig.height=6}
+{r, fig.width=10, fig.height=6}
 tectonic_setting_data <- table(cleaned_data$TECTONIC.SETTING) / nrow(cleaned_data)
 colors <- rainbow(length(tectonic_setting_data))
 
@@ -234,9 +257,8 @@ legend(
   cex = 0.7,
   bty = "n"
 )
-```
 
-```{r, fig.width=10, fig.height=6}
+{r, fig.width=10, fig.height=6}
 tectonic_setting_data <- table(cleaned_data$TECTONIC.SETTING)
 tectonic_setting_data <- sort(tectonic_setting_data, decreasing = FALSE)
 
@@ -249,24 +271,21 @@ dotchart(
   xlab = "Broj uzoraka",
   cex = 1
 )
-```
 
-```{r, fig.width=10, fig.height=6}
+{r, fig.width=10, fig.height=6}
 tectonic_setting_data <- as.data.frame(tectonic_setting_data)
 colnames(tectonic_setting_data) <- c("TECTONIC.SETTING", "COUNT")
 
 tectonic_setting_data$PERCENT <- round(tectonic_setting_data$COUNT / sum(tectonic_setting_data$COUNT) * 100, 2)
 tectonic_setting_data <- tectonic_setting_data[order(tectonic_setting_data$COUNT), ]
 tectonic_setting_data
-```
 
-2. Izračunavanje vrednosti deskriptivnih statistika po obeležjima i vizualizovanje raspodele. Ostala obeležja sadrže podatke o sadržaju pojedinačkih hemijskih jedinjenja (u procentima za okside i u broju čestica za ostale). Broj ovih obeležja je velik, a za klasifikacione modele su korišćeni različiti podskupovi. Ispod su prikazani detalji o pojedinačnim obeležjima, kao i detalji o istim obeležjima grupisanim po tektonskom okruženju.
+Izračunavanje vrednosti deskriptivnih statistika po obeležjima i vizualizovanje raspodele. Ostala obeležja sadrže podatke o sadržaju pojedinačkih hemijskih jedinjenja (u procentima za okside i u broju čestica za ostale). Broj ovih obeležja je velik, a za klasifikacione modele su korišćeni različiti podskupovi. Ispod su prikazani detalji o pojedinačnim obeležjima, kao i detalji o istim obeležjima grupisanim po tektonskom okruženju.
 
-```{r}
+{r}
 chemical_column <- "SIO2.WT"
-```
 
-```{r, fig.width=10, fig.height=6}
+{r, fig.width=10, fig.height=6}
 missing_values_counts <- table(is.na(cleaned_data[[chemical_column]]))
 
 labels <- c("NOT NA", "NA")
@@ -278,9 +297,8 @@ pie(
   col = colors,
   main = paste("NA vs NOT NA - ", chemical_column)
 )
-```
 
-```{r, fig.width=10, fig.height=5}
+{r, fig.width=10, fig.height=5}
 missing_value_counts <- table(cleaned_data$TECTONIC.SETTING, is.na(cleaned_data[[chemical_column]]))
 missing_value_counts <- prop.table(missing_value_counts, 1)
 rownames(missing_value_counts) <- ifelse(
@@ -303,9 +321,8 @@ barplot(
   main = paste("NA distribucija po tektonskim okruženjima - ", chemical_column),
   ylab = "Broj uzoraka"
 )
-```
 
-```{r, fig.width=10, fig.height=5}
+{r, fig.width=10, fig.height=5}
 chemical_data <- tapply(cleaned_data[[chemical_column]], cleaned_data$TECTONIC.SETTING, function(x) sum(!is.na(x)))
 chemical_data <- sort(chemical_data, decreasing = FALSE)
 
@@ -316,9 +333,8 @@ dotchart(
   xlab = "Broj uzoraka",
   cex = 0.9
 )
-```
 
-```{r}
+{r}
 chemical_data <- cleaned_data[[chemical_column]]
 
 chemical_data_summary <- data.frame(
@@ -329,9 +345,8 @@ chemical_data_summary <- data.frame(
   median = median(chemical_data, na.rm = TRUE)
 )
 chemical_data_summary
-```
 
-```{r}
+{r}
 chemical_data <- select(cleaned_data, TECTONIC.SETTING, all_of(chemical_column))
 
 chemical_data_summary <- chemical_data %>%
@@ -346,9 +361,8 @@ chemical_data_summary <- chemical_data %>%
   )
 
 chemical_data_summary
-```
 
-```{r, fig.width=10, fig.height=5}
+{r, fig.width=10, fig.height=5}
 chemical_data <- cleaned_data[[chemical_column]]
 
 boxplot(
@@ -359,9 +373,8 @@ boxplot(
   las = 2,
   cex.axis = 0.625
 )
-```
 
-```{r, fig.width=10, fig.height=5}
+{r, fig.width=10, fig.height=5}
 chemical_data <- select(cleaned_data, TECTONIC.SETTING, all_of(chemical_column))
 chemical_data <- mutate(
     chemical_data,
@@ -380,9 +393,8 @@ boxplot(
   las = 2,
   cex.axis = 0.625
 )
-```
 
-```{r, fig.width=10, fig.height=5}
+{r, fig.width=10, fig.height=5}
 h <- hist(cleaned_data[[chemical_column]], plot = FALSE)
 
 hist(cleaned_data[[chemical_column]],
@@ -395,11 +407,10 @@ hist(cleaned_data[[chemical_column]],
 cor(cleaned_data$SIO2.WT,
     cleaned_data$MGO.WT,
     use = "complete.obs")
-```
 
-3. Ispitivanje odnosa između obeležja. Ispod su prikazane mere korelacije između svih obeležja sortirane od većih ka manjim.
+Ispitivanje odnosa između obeležja. Ispod su prikazane mere korelacije između svih obeležja sortirane od većih ka manjim.
 
-```{r, fig.width=10, fig.height=5}
+{r, fig.width=10, fig.height=5}
 corelations <- cor(cleaned_data[chemical_columns], use = "pairwise.complete.obs")
 corelations <- as.data.frame(as.table(corelations))
 corelations <- corelations[corelations$Var1 != corelations$Var2, ]
@@ -412,9 +423,8 @@ corelations <- corelations[order(abs(corelations$Freq), decreasing = TRUE), ]
 
 colnames(corelations) <- c("Obeležje 1", "Obeležje 2", "Korelacija")
 corelations
-```
 
-```{r, fig.width=10, fig.height=5}
+{r, fig.width=10, fig.height=5}
 chemical_column_1 <- "SIO2.WT"
 chemical_column_2 <- "AL2O3.WT"
 
@@ -423,12 +433,6 @@ filter(
   (`Obeležje 1` == chemical_column_1 & `Obeležje 2` == chemical_column_2) |
   (`Obeležje 1` == chemical_column_2 & `Obeležje 2` == chemical_column_1)
 )
-```
 
-
-
-
-
-
-
+Klasifikacija
 
