@@ -524,6 +524,31 @@ cor(cleaned_data$SIO2.WT,
 Ispitivanje odnosa između obeležja. Ispod su prikazane mere korelacije između svih obeležja sortirane od većih ka manjim.
 
 ```{r, fig.width=10, fig.height=5}
+corealtions <- table(cleaned_data$TECTONIC.SETTING, cleaned_data$LAND.OR.SEA)
+corealtions <- prop.table(corealtions, 1)
+rownames(corealtions) <- ifelse(
+  nchar(rownames(corealtions)) > 12,
+  paste0(substr(rownames(corealtions), 1, 12), "..."),
+  rownames(corealtions)
+)
+corealtions <- t(corealtions)
+
+labels <- c("Land", "Sea")
+colors <- c("brown", "cyan")
+
+barplot(
+  corealtions,
+  col = colors,
+  legend = labels,
+  beside = FALSE,
+  las = 2,
+  cex.names = 0.625,
+  main = paste("NA distribucija po tektonskim okruženjima - ", chemical_column),
+  ylab = "Broj uzoraka"
+)
+```
+
+```{r, fig.width=10, fig.height=5}
 corelations <- cor(cleaned_data[chemical_columns], use = "pairwise.complete.obs")
 corelations <- as.data.frame(as.table(corelations))
 corelations <- corelations[corelations$Var1 != corelations$Var2, ]
