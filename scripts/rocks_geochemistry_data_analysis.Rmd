@@ -12,6 +12,7 @@ Za početak navodimo sve potrebne pakete i pozicioniramo se u željeni direktori
 
 ```{r}
 library(tidyverse)
+library(randomForest)
 ```
 
 Učitavamo podatke iz fajlova. Dataset je razbijen na desetine fajlova i potrebno je podatke objediniti.
@@ -576,3 +577,63 @@ filter(
 
 Klasifikacija
 
+```{r, fig.width=10, fig.height=5}
+library(randomForest)
+
+chemical_columns <- c(oxide_columns, trace_element_columns)
+
+nrow(cleaned_data)
+model_data <- cleaned_data[, c("LAND.OR.SEA", chemical_columns)]
+nrow(model_data)
+
+model_data[chemical_columns] <- lapply(
+  model_data[chemical_columns],
+  function(x) {
+    x[is.na(x)] <- 0
+    x
+  }
+)
+
+set.seed(42)
+
+train_indices <- sample(
+  seq_len(nrow(model_data)),
+  size = 0.8 * nrow(model_data)
+)
+
+train_data <- model_data[train_indices, ]
+test_data <- model_data[-train_indices, ]
+
+random_forest <- randomForest(
+  LAND.OR.SEA ~ .,
+  data = train_data,
+  ntree = 100,
+  classwt = c(LAND = 1, SEA = 2)
+)
+
+predictions <- predict(
+  random_forest,
+  newdata = test_data,
+  type = "response"
+)
+
+confusion_matrix <- table(
+  Actual = test_data$LAND.OR.SEA,
+  Predicted = predictions
+)
+
+confusion_matrix
+
+accuracy <- mean(predictions == test_data$LAND.OR.SEA)
+
+accuracy
+
+library(caret)
+
+cm <- confusionMatrix(
+  predictions,
+  test_data$LAND.OR.SEA
+)
+
+cm
+```
