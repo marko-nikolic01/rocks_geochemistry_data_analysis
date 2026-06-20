@@ -578,6 +578,98 @@ filter(
 Klasifikacija
 
 ```{r}
+run_decision_tree <- function(predictor_columns, importance = TRUE, ...) {
+  library(caret)
+  library(rpart)
+
+  model_data <- cleaned_data[, c("LAND.OR.SEA", predictor_columns)]
+
+  model_data[predictor_columns] <- lapply(
+    model_data[predictor_columns],
+    function(x) {
+      x[is.na(x)] <- 0
+      x
+    }
+  )
+
+  set.seed(67)
+
+  cross_validation <- trainControl(
+    method = "cv",
+    number = 2,
+    classProbs = TRUE,
+    savePredictions = TRUE
+  )
+
+  decision_tree <- train(
+    LAND.OR.SEA ~ .,
+    data = model_data,
+    method = "rpart",
+    trControl = cross_validation,
+    tuneGrid = data.frame(
+      cp = 0.0001
+    ),
+    control = rpart.control(
+      minsplit = 20,
+      minbucket = 10,
+      maxdepth = 30
+    ),
+    ...
+  )
+
+  if (importance) {
+    print(varImp(decision_tree))
+  }
+
+  print(decision_tree)
+
+  predictions <- decision_tree$pred
+
+  confusion_matrix_land <- confusionMatrix(
+    predictions$pred,
+    predictions$obs,
+    positive = "LAND"
+  )
+
+  confusion_matrix_sea <- confusionMatrix(
+    predictions$pred,
+    predictions$obs,
+    positive = "SEA"
+  )
+
+  accuracy <- confusion_matrix_land$overall["Accuracy"]
+
+  land_precision <- confusion_matrix_land$byClass["Pos Pred Value"]
+  land_sensitivity <- confusion_matrix_land$byClass["Sensitivity"]
+  land_f1 <- 2 * (land_precision * land_sensitivity) /
+    (land_precision + land_sensitivity)
+
+  sea_precision <- confusion_matrix_sea$byClass["Pos Pred Value"]
+  sea_sensitivity <- confusion_matrix_sea$byClass["Sensitivity"]
+  sea_f1 <- 2 * (sea_precision * sea_sensitivity) /
+    (sea_precision + sea_sensitivity)
+
+
+  cat("\nМатрица конфузије:")
+  print(confusion_matrix_land$table)
+
+  cat("\nТачност:", accuracy)
+
+  cat("\n\nLAND:")
+  cat("\nПрецизност:", land_precision)
+  cat("\nОсетљивост:", land_sensitivity)
+  cat("\nСкор Ф1:", land_f1)
+
+  cat("\n\nSEA:")
+  cat("\nПрецизност:", sea_precision)
+  cat("\nОсетљивост:", sea_sensitivity)
+  cat("\nСкор Ф1:", sea_f1)
+}
+```
+
+
+
+```{r}
 run_random_forest <- function(predictor_columns, importance = TRUE, ...) {
   library(randomForest)
   library(caret)
