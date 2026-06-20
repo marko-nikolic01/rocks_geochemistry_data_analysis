@@ -667,6 +667,15 @@ run_decision_tree <- function(predictor_columns, importance = TRUE, ...) {
 }
 ```
 
+Klasifikacija 4
+
+```{r}
+predictor_columns <- c(oxide_columns, trace_element_columns)
+
+run_decision_tree(
+  predictor_columns = predictor_columns
+)
+```
 
 
 ```{r}
