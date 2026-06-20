@@ -646,6 +646,17 @@ run_random_forest <- function(predictor_columns, importance = TRUE, ...) {
 }
 ```
 
+Klasifikacija 1
+
+```{r}
+predictor_columns <- c(oxide_columns, trace_element_columns)
+
+run_random_forest(
+  predictor_columns = predictor_columns,
+  ntree = 10
+)
+```
+
 
 
 
