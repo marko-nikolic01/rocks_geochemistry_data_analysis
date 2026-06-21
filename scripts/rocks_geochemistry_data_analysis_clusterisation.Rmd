@@ -701,7 +701,45 @@ km <- run_kmeans(
 )
 ```
 
+```{r}
+predictor_columns <- c(
+  "ZR.PPM",
+  "MGO.WT",
+  "MO.PPM",
+  "P2O5.WT",
+  "CR2O3.WT",
+  "K2O.WT",
+  "ZN.PPM",
+  "CU.PPM",
+  "SIO2.WT",
+  "TI.PPM",
+  "H2O.WT",
+  "B.PPM",
+  "CO.PPM",
+  "HF.PPM",
+  "CL.WT",
+  "S.WT",
+  "RB.PPM",
+  "SR.PPM",
+  "NB.PPM",
+  "BA.PPM"
+)
 
+tectonic_settings <- c(
+  "ARCHEAN CRATON (INCLUDING GREENSTONE BELTS)",
+  "CONTINENTAL FLOOD BASALT",
+  "CONVERGENT MARGIN",
+  "INTRAPLATE VOLCANICS",
+  "OCEAN ISLAND",
+  "RIFT VOLCANICS"
+)
+
+km <- run_kmeans(
+  predictor_columns,
+  centers = 5,
+  tectonic_settings = tectonic_settings
+)
+```
 
 
 
