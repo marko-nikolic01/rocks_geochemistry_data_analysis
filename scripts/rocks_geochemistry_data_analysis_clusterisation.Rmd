@@ -1,6 +1,6 @@
 ---
-title: "Analiza geohemijskog sastava stena"
-author: "Marko Nikolić E2 47-2024"
+title: "Анализа геохемијског састава стена"
+author: "Марко Николић E2 47-2024"
 output: html_document
 ---
 
@@ -522,7 +522,7 @@ chemical_data <- cleaned_data[[chemical_column]]
 
 boxplot(
   chemical_data,
-  main = chemical_column,
+  main = paste("Расподела вредности - ", chemical_column),
   xlab = NA,
   ylab = chemical_column,
   las = 2,
@@ -545,7 +545,7 @@ chemical_data <- mutate(
 
 boxplot(
   chemical_data[[chemical_column]] ~ chemical_data$LAND.OR.SEA,
-  main = chemical_column,
+  main = paste("Расподела вредности - ", chemical_column),
   xlab = NA,
   ylab = chemical_column,
   las = 2,
@@ -568,7 +568,7 @@ chemical_data <- mutate(
 
 boxplot(
   chemical_data[[chemical_column]] ~ chemical_data$TECTONIC.SETTING,
-  main = chemical_column,
+  main = paste("Расподела вредности - ", chemical_column),
   xlab = NA,
   ylab = chemical_column,
   las = 2,
@@ -580,12 +580,13 @@ boxplot(
 ```{r, fig.width=10, fig.height=5}
 h <- hist(cleaned_data[[chemical_column]], plot = FALSE)
 
-hist(cleaned_data[[chemical_column]],
-     main = chemical_column,
-     xlab = chemical_column,
-     ylab = "Broj pojava",
-     ylim = c(0, max(h$counts) * 1.2)
-    )
+hist(
+  cleaned_data[[chemical_column]],
+  main = paste("Расподела вредности - ", chemical_column),
+  xlab = chemical_column,
+  ylab = "Број појава",
+  ylim = c(0, max(h$counts) * 1.2)
+)
 
 cor(cleaned_data$SIO2.WT,
     cleaned_data$MGO.WT,
@@ -614,8 +615,8 @@ barplot(
   beside = FALSE,
   las = 2,
   cex.names = 0.625,
-  main = paste("NA distribucija po tektonskim okruženjima - ", chemical_column),
-  ylab = "Broj uzoraka"
+  main = "Повезаност између LAND.OR.SEA и TECTONIC.SETTING",
+  ylab = "Број појава"
 )
 ```
 15. За испитивање повезаности хемијских обележја израчуната је корелациона матрица. Вредности корелације су у опсегу од -1 до 1, где пожитивне вредности означавају да вредности расту заједно, а негативне да опадају заједно. На овај начин можемо утврдити да ли неке од хемијских колона носе сличну информацију у себи.
@@ -632,7 +633,7 @@ corelations$key <- NULL
 
 corelations <- corelations[order(abs(corelations$Freq), decreasing = TRUE), ]
 
-colnames(corelations) <- c("Obeležje 1", "Obeležje 2", "Korelacija")
+colnames(corelations) <- c("Обележје 1", "Обележје 2", "Корелација")
 corelations
 ```
 
@@ -644,8 +645,8 @@ chemical_column_2 <- "AL2O3.WT"
 
 filter(
   corelations,
-  (`Obeležje 1` == chemical_column_1 & `Obeležje 2` == chemical_column_2) |
-  (`Obeležje 1` == chemical_column_2 & `Obeležje 2` == chemical_column_1)
+  (`Обележје 1` == chemical_column_1 & `Обележје 2` == chemical_column_2) |
+  (`Обележје 1` == chemical_column_2 & `Обележје 2` == chemical_column_1)
 )
 ```
 
