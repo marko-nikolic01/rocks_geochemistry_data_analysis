@@ -4,18 +4,38 @@ author: "Marko Nikolić E2 47-2024"
 output: html_document
 ---
 
-Priprema podataka
+# Анализа геохемијског састава стена
 
-U ovoj sekciji, prikazano je učitavanje i čišćenje podataka:
+## Скуп података
 
-Za početak navodimo sve potrebne pakete i pozicioniramo se u željeni direktorijum.
+Скуп података потиче из базе података GEOROC (Geochemistry of Rocks of the Oceans and Continents), доступне на сајту <https://georoc.eu>. Подаци садрже информације о концентрацијама хемијских елемената/једињења, изотопске односе као и аналитичке старости за стене, минерале и инклузије. Уз хемијске податке, сваки узорак садржи и податке попут географског положаја и податке о тектонском окружењу.
+
+Подаци су на сајту организовани према тектонским окружењима, и појединачно су преузети и скупљени на једно место за потребе пројекта. Укупна величина скупа износи нешто више од 3 GB.
+
+::: {style="text-align: center;"}
+<img src="images/Screenshot_20260621_171902.png" width="300"/>
+:::
+
+## Технологије
+
+За потребе овог пројекта коришћен је програмски језик R.
+
+::: {style="text-align: center;"}
+<img src="images/Rlogo.png" width="300"/>
+:::
+
+## Припрема података
+
+За почетак је потребно да очистимо податке. Процес чишћења података приказан је у овој секцији.
+
+1.  Пре чишћења података потребно је да наведемо све потребне библиотеке.
 
 ```{r}
 library(tidyverse)
 library(randomForest)
 ```
 
-Učitavamo podatke iz fajlova. Dataset je razbijen na desetine fajlova i potrebno je podatke objediniti.
+2.  Затим, учитавамо податке. Подаци су преузети у локални директоријум и подељени су на десетине фајлова. Код испод учитава податке из свих CSV фајлова и спаја их у један јединствени скуп података.
 
 ```{r}
 files <- list.files("../data/rocks", recursive = TRUE, full.names = TRUE)
@@ -26,7 +46,13 @@ raw_data <- do.call(rbind, raw_data_parts)
 names(raw_data) <- sub("\\.+$", "", names(raw_data))
 ```
 
-Biramo obeležja koja će nam biti potrebna (tektonsko okruženje, sadržaji pojedinačnih oksida, sadržaji pojedinačnih elemenata u tragovima).
+3.  Овај скуп података садржи велики број обележја (преко 150). За потребе овог пројекта, око 100 обележја је остављено у скупу података, а остатак се одбацује. Преостала обележја обухватају следеће информације:
+    -   Географска обележја:
+        -   LAND.OR.SEA - припадност копненом или морском тектонском окружењу.
+        -   TECTONIC.SETTING - припадност једном од 11 поткатегороја тектонских окружења (другачија подела од море/копно поделе).
+    -   Хемијска обележја:
+        -   Информације о оксидима - процентуални удео одређеног оксида у укупној маси стене.
+        -   Информације о елементима у траговима - број честица неког елемента на милион честица.
 
 ```{r}
 geographical_columns <- c(
@@ -144,7 +170,10 @@ selected_columns <- c(geographical_columns, oxide_columns, trace_element_columns
 cleaned_data <- raw_data[, selected_columns]
 ```
 
-Čišćenje podataka. Za kategoričko obeležje LAND.OR.SEA uočeno je da iako je vrednost LAND.OR.SEA u većini redova napisana velikim slovima, u pojedinim su zaostala mala slova pa je potrebno normalizovati.
+4.  Преостале податке је потребно пречистити. За почетак је потребно обратити пажњу на обележје LAND.OR.SEA:
+    -   брисање редова недостајућим вредностима у овој колони (NA или "").
+    -   претварање малих слова у велика како не бисмо имали различите вредности за исту информацију.
+    -   пребацивање вредности из скупа у разумљивије вредности (LAND/SEA).
 
 ```{r}
 cleaned_data$LAND.OR.SEA <- as.factor(cleaned_data$LAND.OR.SEA)
@@ -159,7 +188,9 @@ cleaned_data$LAND.OR.SEA <- as.factor(cleaned_data$LAND.OR.SEA)
 levels(cleaned_data$LAND.OR.SEA)
 ```
 
-Čišćenje podataka. Za kategoričko obeležje TECTONIC.SETTING uočeno je da postoje redovi gde je vrednost prazan string, ove redove izbacujemo. Takođe, iako je vrednost TECTONIC.SETTING u većini redova napisana velikim slovima, u pojedinim su zaostala mala slova pa je potrebno normalizovati.
+5.  Слично радимо и за обележје TECTONIC.SETTING:
+    -   брисање редова недостајућим вредностима у овој колони (NA или "").
+    -   претварање малих слова у велика како не бисмо имали различите вредности за исту информацију.
 
 ```{r}
 cleaned_data$TECTONIC.SETTING <- as.factor(cleaned_data$TECTONIC.SETTING)
@@ -173,13 +204,23 @@ cleaned_data$TECTONIC.SETTING <- as.factor(cleaned_data$TECTONIC.SETTING)
 levels(cleaned_data$TECTONIC.SETTING)
 ```
 
-Čišćenje podataka. Ostale kolone pretvoriti u numeričke, po prirodi obeležja koja govore koliki deo stene je određeni hemijski element ili koliko čestica tog elementa je prisutno, potrebno je izbaciti redove gde se javljaju negativne vrednosti. Takođe, za obeležja koja govore u procentima (udeo određenog oksida) potrebno je izbaciti redove gde se javljaju vrednosti veće od 100. Takođe, potrebno je izbaciti redove gde je zbir procentualnih udela oksida veći od 100.
+6.  Хемијске колоне се чисте групно. За њих се не бришу редови са недостајућим вредностима јер сваки ред има макар једну због великог броја обележја:
+    -   претварање обележја у нумеричке вредности.
+    -   брисање редова где неки од процената оксида превазилази 100.
+    -   брисање редова где неки од броја честица елемената у траговима оксида превазилази 1000000.
+    -   брисање редова где је неко од џемијских обележја мање од 0.
+    -   брисање редова где сума процената оксида превазилази 100.
+    -   брисање редова где сума броја честица елемената у траговима превазилази 1000000.
 
 ```{r}
 chemical_columns <- c(oxide_columns, trace_element_columns)
 cleaned_data[chemical_columns] <- lapply(cleaned_data[chemical_columns], as.numeric)
 
 bad_values_indicies <- which(apply(cleaned_data[oxide_columns], 1, function(r) any(r > 100, na.rm = TRUE)))
+length(bad_values_indicies)
+cleaned_data <- cleaned_data[-bad_values_indicies, ]
+
+bad_values_indicies <- which(apply(cleaned_data[trace_element_columns], 1, function(r) any(r > 1000000, na.rm = TRUE)))
 length(bad_values_indicies)
 cleaned_data <- cleaned_data[-bad_values_indicies, ]
 
@@ -190,9 +231,15 @@ cleaned_data <- cleaned_data[-bad_values_indicies, ]
 bad_values_indicies <- which(rowSums(cleaned_data[oxide_columns], na.rm = TRUE) > 100)
 length(bad_values_indicies)
 cleaned_data <- cleaned_data[-bad_values_indicies, ]
+
+bad_values_indicies <- which(rowSums(cleaned_data[trace_element_columns], na.rm = TRUE) > 1000000)
+length(bad_values_indicies)
+cleaned_data <- cleaned_data[-bad_values_indicies, ]
 ```
 
-Ispitivanje prisustva nedostajućih vrednost. Obeležja TECTONIC.SETTING i LAND.OR.SEA su već očišćena od nedostajućih vrednosti koja su se javljala u obliku praznog stringa. Ostala obeležja imaju varirajući procenat nedostajućih vrednosti (10-100%).
+7.  Следеће што је потребно урадити је испитивање недостајућих вредности:
+    -   обележја LAND.OR.SEA и TECTONIC.SETTING немају недостајућих вредности, већ су очишћене.
+    -   Хемијска обележја имају варирајући проценат недостајућих вредности.
 
 ```{r, fig.width=20, fig.height=40}
 missing_values_stats <- colMeans(is.na(cleaned_data)) * 100
@@ -206,7 +253,7 @@ dotchart(
 )
 ```
 
-Ispitivanje prisustva nedostajućih vrednost. Ukoliko je potrebno ovde se može videti koliko vrednosti fali za svaki hemijski element grupisano po tektonskoj sredini.
+8.  Уколико је потребно, могуће је испитати и проценат недостајућих вредности за хемијска обележја груписано по обележју LAND.OR.SEA.
 
 ```{r}
 missing_values_stats_by_tectonic_setting <- sapply(chemical_columns, function(c) {
@@ -220,6 +267,8 @@ missing_values_stats_by_tectonic_setting <- sapply(chemical_columns, function(c)
 missing_values_stats_by_tectonic_setting <- t(missing_values_stats_by_tectonic_setting)
 missing_values_stats_by_tectonic_setting
 ```
+
+9.  Уколико је потребно, могуће је испитати и проценат недостајућих вредности за хемијска обележја груписано по обележју TECTONIC.SETTING.
 
 ```{r}
 missing_values_stats_by_tectonic_setting <- sapply(chemical_columns, function(c) {
@@ -259,6 +308,7 @@ legend(
   bty = "n"
 )
 ```
+
 ```{r, fig.width=10, fig.height=6}
 tectonic_setting_data <- table(cleaned_data$LAND.OR.SEA)
 tectonic_setting_data <- as.data.frame(tectonic_setting_data)
@@ -290,8 +340,6 @@ legend(
   bty = "n"
 )
 ```
-
-
 
 ```{r, fig.width=10, fig.height=6}
 tectonic_setting_data <- table(cleaned_data$TECTONIC.SETTING)
@@ -336,6 +384,7 @@ pie(
   main = paste("NA vs NOT NA - ", chemical_column)
 )
 ```
+
 ```{r, fig.width=10, fig.height=5}
 missing_value_counts <- table(cleaned_data$LAND.OR.SEA, is.na(cleaned_data[[chemical_column]]))
 missing_value_counts <- prop.table(missing_value_counts, 1)
@@ -360,7 +409,6 @@ barplot(
   ylab = "Broj uzoraka"
 )
 ```
-
 
 ```{r, fig.width=10, fig.height=5}
 missing_value_counts <- table(cleaned_data$TECTONIC.SETTING, is.na(cleaned_data[[chemical_column]]))
@@ -736,11 +784,7 @@ tectonic_settings <- c(
 
 km <- run_kmeans(
   predictor_columns,
-  centers = 5,
+  centers = 6,
   tectonic_settings = tectonic_settings
 )
 ```
-
-
-
-
