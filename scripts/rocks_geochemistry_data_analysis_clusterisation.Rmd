@@ -671,6 +671,36 @@ run_kmeans <- function(predictor_columns, centers, tectonic_settings = NULL) {
 }
 ```
 
+```{r}
+predictor_columns <- c(
+  "ZR.PPM",
+  "MGO.WT",
+  "MO.PPM",
+  "P2O5.WT",
+  "CR2O3.WT",
+  "K2O.WT",
+  "ZN.PPM",
+  "CU.PPM",
+  "SIO2.WT",
+  "TI.PPM",
+  "H2O.WT",
+  "B.PPM",
+  "CO.PPM",
+  "HF.PPM",
+  "CL.WT",
+  "S.WT",
+  "RB.PPM",
+  "SR.PPM",
+  "NB.PPM",
+  "BA.PPM"
+)
+
+km <- run_kmeans(
+  predictor_columns,
+  centers = 11
+)
+```
+
 
 
 
