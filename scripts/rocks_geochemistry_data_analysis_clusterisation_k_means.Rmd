@@ -220,19 +220,11 @@ bad_values_indicies <- which(apply(cleaned_data[oxide_columns], 1, function(r) a
 length(bad_values_indicies)
 cleaned_data <- cleaned_data[-bad_values_indicies, ]
 
-bad_values_indicies <- which(apply(cleaned_data[trace_element_columns], 1, function(r) any(r > 1000000, na.rm = TRUE)))
-length(bad_values_indicies)
-cleaned_data <- cleaned_data[-bad_values_indicies, ]
-
 bad_values_indicies <- which(apply(cleaned_data[chemical_columns], 1, function(r) any(r < 0, na.rm = TRUE)))
 length(bad_values_indicies)
 cleaned_data <- cleaned_data[-bad_values_indicies, ]
 
 bad_values_indicies <- which(rowSums(cleaned_data[oxide_columns], na.rm = TRUE) > 100)
-length(bad_values_indicies)
-cleaned_data <- cleaned_data[-bad_values_indicies, ]
-
-bad_values_indicies <- which(rowSums(cleaned_data[trace_element_columns], na.rm = TRUE) > 1000000)
 length(bad_values_indicies)
 cleaned_data <- cleaned_data[-bad_values_indicies, ]
 ```
@@ -650,11 +642,17 @@ filter(
 )
 ```
 
-Klasterizacija
+## Кластеризација
+
+Након прелиминарне анализе података, може се почети са развијањем кластеризације. У овој секцији приказана је кластеризација уз помоћ K Means алгоритма.
+
+### Кластеризација - K Means
+
+Испод је приказана функција коришћена за K Means кластеризацију.
 
 ```{r}
 plot_cluster_distribution <- function(cluster, labels) {
-  cat("\nVelicina klastera:\n")
+  cat("\nВеличина кластера:\n")
   print(table(cluster))
 
   data <- table(TECTONIC.SETTING = labels, Cluster = cluster)
@@ -667,8 +665,8 @@ plot_cluster_distribution <- function(cluster, labels) {
     legend = colnames(data),
     las = 2,
     cex.names = 0.7,
-    main = "Cluster distribution by TECTONIC.SETTING (%)",
-    ylab = "Percentage"
+    main = "Дистрибуција кластера по тектонском окружењу (%)",
+    ylab = "Проценат"
   )
 }
 
@@ -701,10 +699,10 @@ plot_cluster <- function(data, labels, title, zoom = FALSE) {
 }
 
 plot_clusters <- function(data, cluster, labels, centers) {
-  plot_cluster(data, cluster, paste("K-means cluster, k =", centers))
-  plot_cluster(data, labels, "PCA obojeno prema TECTONIC.SETTING")
-  plot_cluster(data, cluster, paste("K-means cluster, k =", centers), zoom = TRUE)
-  plot_cluster(data, labels, "PCA obojeno prema TECTONIC.SETTING", zoom = TRUE)
+  plot_cluster(data, cluster, paste("K Means кластер, k =", centers))
+  plot_cluster(data, labels, "Стварне расподеле по тектонском окружењу")
+  plot_cluster(data, cluster, paste("K Means кластер, k =", centers), zoom = TRUE)
+  plot_cluster(data, labels, "Стварне расподеле по тектонском окружењу", zoom = TRUE)
 }
 
 summarize_kmeans <- function(data, kmeans_model, labels, centers) {
@@ -746,6 +744,8 @@ run_kmeans <- function(predictor_columns, centers, tectonic_settings = NULL) {
 }
 ```
 
+### Кластеризација - K Means 1 (КМ1)
+
 ```{r}
 predictor_columns <- c(
   "ZR.PPM",
@@ -775,6 +775,8 @@ km <- run_kmeans(
   centers = 11
 )
 ```
+
+### Кластеризација - K Means 2 (КМ2)
 
 ```{r}
 predictor_columns <- c(

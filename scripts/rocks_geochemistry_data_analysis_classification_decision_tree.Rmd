@@ -1,0 +1,802 @@
+---
+title: "Анализа геохемијског састава стена"
+author: "Марко Николић E2 47-2024"
+output: html_document
+---
+
+# Анализа геохемијског састава стена
+
+## Скуп података
+
+Скуп података потиче из базе података GEOROC (Geochemistry of Rocks of the Oceans and Continents), доступне на сајту <https://georoc.eu>. Подаци садрже информације о концентрацијама хемијских елемената/једињења, изотопске односе као и аналитичке старости за стене, минерале и инклузије. Уз хемијске податке, сваки узорак садржи и податке попут географског положаја и податке о тектонском окружењу.
+
+Подаци су на сајту организовани према тектонским окружењима, и појединачно су преузети и скупљени на једно место за потребе пројекта. Укупна величина скупа износи нешто више од 3 GB.
+
+::: {style="text-align: center;"}
+<img src="images/Screenshot_20260621_171902.png" width="300"/>
+:::
+
+## Технологије
+
+За потребе овог пројекта коришћен је програмски језик R.
+
+::: {style="text-align: center;"}
+<img src="images/Rlogo.png" width="300"/>
+:::
+
+## Припрема података
+
+За почетак је потребно да очистимо податке. Процес чишћења података приказан је у овој секцији.
+
+1.  Пре чишћења података потребно је да наведемо све потребне библиотеке.
+
+```{r}
+library(tidyverse)
+library(randomForest)
+```
+
+2.  Затим, учитавамо податке. Подаци су преузети у локални директоријум и подељени су на десетине фајлова. Код испод учитава податке из свих CSV фајлова и спаја их у један јединствени скуп података.
+
+```{r}
+files <- list.files("../data/rocks", recursive = TRUE, full.names = TRUE)
+files <- files[grepl("\\.csv$", files)]
+
+raw_data_parts <- lapply(files, read.csv)
+raw_data <- do.call(rbind, raw_data_parts)
+names(raw_data) <- sub("\\.+$", "", names(raw_data))
+```
+
+3.  Овај скуп података садржи велики број обележја (преко 150). За потребе овог пројекта, око 100 обележја је остављено у скупу података, а остатак се одбацује. Преостала обележја обухватају следеће информације:
+    -   Географска обележја:
+        -   LAND.OR.SEA - припадност копненом или морском тектонском окружењу.
+        -   TECTONIC.SETTING - припадност једном од 11 поткатегороја тектонских окружења (другачија подела од море/копно поделе).
+    -   Хемијска обележја:
+        -   Информације о оксидима - процентуални удео одређеног оксида у укупној маси стене.
+        -   Информације о елементима у траговима - број честица неког елемента на милион честица.
+
+```{r}
+geographical_columns <- c(
+  "LAND.OR.SEA",
+  "TECTONIC.SETTING"
+)
+oxide_columns <- c(
+  "SIO2.WT",
+  "TIO2.WT",
+  "B2O3.WT",
+  "AL2O3.WT",
+  "CR2O3.WT",
+  "FE2O3.WT",
+  "FEO.WT",
+  "CAO.WT",
+  "MGO.WT",
+  "MNO.WT",
+  "NIO.WT",
+  "K2O.WT",
+  "NA2O.WT",
+  "P2O5.WT",
+  "H2O.WT",
+  "CO2.WT",
+  "CO1.WT",
+  "F.WT",
+  "CL.WT",
+  "CL2.WT",
+  "OH.WT",
+  "CH4.WT",
+  "SO2.WT",
+  "SO3.WT",
+  "SO4.WT",
+  "S.WT",
+  "O.WT"
+)
+trace_element_columns <- c(
+  "LI.PPM",
+  "BE.PPM",
+  "B.PPM",
+  "C.PPM",
+  "CO2.PPM",
+  "F.PPM",
+  "NA.PPM",
+  "MG.PPM",
+  "AL.PPM",
+  "P.PPM",
+  "S.PPM",
+  "CL.PPM",
+  "K.PPM",
+  "CA.PPM",
+  "SC.PPM",
+  "TI.PPM",
+  "V.PPM",
+  "CR.PPM",
+  "MN.PPM",
+  "FE.PPM",
+  "CO.PPM",
+  "NI.PPM",
+  "CU.PPM",
+  "ZN.PPM",
+  "GA.PPM",
+  "GE.PPM",
+  "AS.PPM",
+  "SE.PPM",
+  "BR.PPM",
+  "RB.PPM",
+  "SR.PPM",
+  "Y.PPM",
+  "ZR.PPM",
+  "NB.PPM",
+  "MO.PPM",
+  "RU.PPM",
+  "RH.PPM",
+  "PD.PPM",
+  "AG.PPM",
+  "CD.PPM",
+  "IN.PPM",
+  "SN.PPM",
+  "SB.PPM",
+  "TE.PPM",
+  "I.PPM",
+  "CS.PPM",
+  "BA.PPM",
+  "LA.PPM",
+  "CE.PPM",
+  "PR.PPM",
+  "ND.PPM",
+  "SM.PPM",
+  "EU.PPM",
+  "GD.PPM",
+  "TB.PPM",
+  "DY.PPM",
+  "HO.PPM",
+  "ER.PPM",
+  "TM.PPM",
+  "YB.PPM",
+  "LU.PPM",
+  "HF.PPM",
+  "TA.PPM",
+  "W.PPM",
+  "RE.PPM",
+  "OS.PPM",
+  "IR.PPM",
+  "PT.PPM",
+  "AU.PPM",
+  "HG.PPM",
+  "TL.PPM",
+  "PB.PPM",
+  "BI.PPM",
+  "TH.PPM",
+  "U.PPM"
+)
+selected_columns <- c(geographical_columns, oxide_columns, trace_element_columns)
+
+cleaned_data <- raw_data[, selected_columns]
+```
+
+4.  Преостале податке је потребно пречистити. За почетак је потребно обратити пажњу на обележје LAND.OR.SEA:
+    -   брисање редова недостајућим вредностима у овој колони (NA или "").
+    -   претварање малих слова у велика како не бисмо имали различите вредности за исту информацију.
+    -   пребацивање вредности из скупа у разумљивије вредности (LAND/SEA).
+
+```{r}
+cleaned_data$LAND.OR.SEA <- as.factor(cleaned_data$LAND.OR.SEA)
+levels(cleaned_data$LAND.OR.SEA)
+
+cleaned_data <- filter(cleaned_data, !is.na(LAND.OR.SEA))
+cleaned_data <- filter(cleaned_data, LAND.OR.SEA != "")
+cleaned_data$LAND.OR.SEA <- toupper(cleaned_data$LAND.OR.SEA)
+cleaned_data$LAND.OR.SEA <- ifelse(cleaned_data$LAND.OR.SEA == "SAE", "LAND", "SEA")
+
+cleaned_data$LAND.OR.SEA <- as.factor(cleaned_data$LAND.OR.SEA)
+levels(cleaned_data$LAND.OR.SEA)
+```
+
+5.  Слично радимо и за обележје TECTONIC.SETTING:
+    -   брисање редова недостајућим вредностима у овој колони (NA или "").
+    -   претварање малих слова у велика како не бисмо имали различите вредности за исту информацију.
+
+```{r}
+cleaned_data$TECTONIC.SETTING <- as.factor(cleaned_data$TECTONIC.SETTING)
+levels(cleaned_data$TECTONIC.SETTING)
+
+cleaned_data <- filter(cleaned_data, !is.na(TECTONIC.SETTING))
+cleaned_data <- filter(cleaned_data, TECTONIC.SETTING != "")
+cleaned_data$TECTONIC.SETTING <- toupper(cleaned_data$TECTONIC.SETTING)
+
+cleaned_data$TECTONIC.SETTING <- as.factor(cleaned_data$TECTONIC.SETTING)
+levels(cleaned_data$TECTONIC.SETTING)
+```
+
+6.  Хемијске колоне се чисте групно. За њих се не бришу редови са недостајућим вредностима јер сваки ред има макар једну због великог броја обележја:
+    -   претварање обележја у нумеричке вредности.
+    -   брисање редова где неки од процената оксида превазилази 100.
+    -   брисање редова где неки од броја честица елемената у траговима оксида превазилази 1000000.
+    -   брисање редова где је неко од џемијских обележја мање од 0.
+    -   брисање редова где сума процената оксида превазилази 100.
+    -   брисање редова где сума броја честица елемената у траговима превазилази 1000000.
+
+```{r}
+chemical_columns <- c(oxide_columns, trace_element_columns)
+cleaned_data[chemical_columns] <- lapply(cleaned_data[chemical_columns], as.numeric)
+
+bad_values_indicies <- which(apply(cleaned_data[oxide_columns], 1, function(r) any(r > 100, na.rm = TRUE)))
+length(bad_values_indicies)
+cleaned_data <- cleaned_data[-bad_values_indicies, ]
+
+bad_values_indicies <- which(apply(cleaned_data[trace_element_columns], 1, function(r) any(r > 1000000, na.rm = TRUE)))
+length(bad_values_indicies)
+cleaned_data <- cleaned_data[-bad_values_indicies, ]
+
+bad_values_indicies <- which(apply(cleaned_data[chemical_columns], 1, function(r) any(r < 0, na.rm = TRUE)))
+length(bad_values_indicies)
+cleaned_data <- cleaned_data[-bad_values_indicies, ]
+
+bad_values_indicies <- which(rowSums(cleaned_data[oxide_columns], na.rm = TRUE) > 100)
+length(bad_values_indicies)
+cleaned_data <- cleaned_data[-bad_values_indicies, ]
+
+bad_values_indicies <- which(rowSums(cleaned_data[trace_element_columns], na.rm = TRUE) > 1000000)
+length(bad_values_indicies)
+cleaned_data <- cleaned_data[-bad_values_indicies, ]
+```
+
+7.  Следеће што је потребно урадити је испитивање недостајућих вредности:
+    -   обележја LAND.OR.SEA и TECTONIC.SETTING немају недостајућих вредности, већ су очишћене.
+    -   Хемијска обележја имају варирајући проценат недостајућих вредности.
+
+```{r, fig.width=20, fig.height=40}
+missing_values_stats <- colMeans(is.na(cleaned_data)) * 100
+missing_values_stats <- sort(missing_values_stats, decreasing = FALSE)
+
+dotchart(
+  missing_values_stats,
+  main = "Procenat nedostajućih vrednosti po obeležjima",
+  xlab = "Procenat NA (%)",
+  cex = 2
+)
+```
+
+8.  Уколико је потребно, могуће је испитати и проценат недостајућих вредности за хемијска обележја груписано по обележју LAND.OR.SEA.
+
+```{r}
+missing_values_stats_by_tectonic_setting <- sapply(chemical_columns, function(c) {
+  tapply(
+    is.na(cleaned_data[[c]]),
+    cleaned_data$LAND.OR.SEA,
+    mean
+  )
+}) * 100
+
+missing_values_stats_by_tectonic_setting <- t(missing_values_stats_by_tectonic_setting)
+missing_values_stats_by_tectonic_setting
+```
+
+9.  Уколико је потребно, могуће је испитати и проценат недостајућих вредности за хемијска обележја груписано по обележју TECTONIC.SETTING.
+
+```{r}
+missing_values_stats_by_tectonic_setting <- sapply(chemical_columns, function(c) {
+  tapply(
+    is.na(cleaned_data[[c]]),
+    cleaned_data$TECTONIC.SETTING,
+    mean
+  )
+}) * 100
+
+missing_values_stats_by_tectonic_setting <- t(missing_values_stats_by_tectonic_setting)
+missing_values_stats_by_tectonic_setting
+```
+
+## Прелиминарна анализа података
+
+Након чишћења података, потребно је извршити почетне анализе. У овој секцији је приказана прелиминарна анализа података.
+
+1.  Обележје LAND.OR.SEA је једно од централних обележја скупа података. Има две могуће вредност: LAND и SEA. За почетак можемо видети да је стена из скупа података потиче из копненог тектонског окружења (око 93%), док морском тектонском окружењу припада знатно мањи број (око 7%).
+
+```{r, fig.width=10, fig.height=6}
+tectonic_setting_data <- table(cleaned_data$LAND.OR.SEA) / nrow(cleaned_data)
+colors <- c("brown", "cyan")
+
+pie(
+  tectonic_setting_data,
+  col = colors,
+  labels = NA,
+  main = "Процентуална расподела тектонских окружења"
+)
+
+legend(
+  "topleft",
+  legend = paste0(names(tectonic_setting_data), " (", round(100 * tectonic_setting_data / sum(tectonic_setting_data), 1), "%)"),
+  fill = colors,
+  cex = 0.7,
+  bty = "n"
+)
+```
+
+2.  У табели испод можемо видети исту информацију, овај пут са конкретним бројем стена у сваком окружењу. Дакле у скупу података постоји неуравнотеженост што се тиче тектонских окружења.
+
+```{r, fig.width=10, fig.height=6}
+tectonic_setting_data <- table(cleaned_data$LAND.OR.SEA)
+tectonic_setting_data <- as.data.frame(tectonic_setting_data)
+colnames(tectonic_setting_data) <- c("LAND.OR.SEA", "COUNT")
+
+tectonic_setting_data$PERCENT <- round(tectonic_setting_data$COUNT / sum(tectonic_setting_data$COUNT) * 100, 2)
+tectonic_setting_data <- tectonic_setting_data[order(tectonic_setting_data$COUNT), ]
+tectonic_setting_data
+```
+
+3.  Још једно централно обележје скупа података је обележје TECTONIC.SETTING. Има 11 могућих вредности и представља мало детаљнију поделу тектонских окружења од поделе коју даје обележје LAND.OR.SEA. И овде можемо уочити неуравнотеженост где неколико вредности доминира у скупу.
+
+```{r, fig.width=10, fig.height=6}
+tectonic_setting_data <- table(cleaned_data$TECTONIC.SETTING) / nrow(cleaned_data)
+colors <- rainbow(length(tectonic_setting_data))
+
+pie(
+  tectonic_setting_data,
+  col = colors,
+  labels = NA,
+  main = "Процентуална расподела тектонских окружења"
+)
+
+legend(
+  "topleft",
+  legend = paste0(names(tectonic_setting_data), " (", round(100 * tectonic_setting_data / sum(tectonic_setting_data), 1), "%)"),
+  fill = colors,
+  cex = 0.7,
+  bty = "n"
+)
+```
+
+4.  У графику и табели испод можемо видети исту информацију, овај пут са конкретним бројем стена у сваком окружењу. Дакле у скупу података постоји неуравнотеженост што се тиче тектонских окружења.
+
+```{r, fig.width=10, fig.height=6}
+tectonic_setting_data <- table(cleaned_data$TECTONIC.SETTING)
+tectonic_setting_data <- sort(tectonic_setting_data, decreasing = FALSE)
+
+labels <- names(tectonic_setting_data)
+
+dotchart(
+  tectonic_setting_data,
+  labels = labels,
+  main = "Broj uzoraka po tektonskom okruženju",
+  xlab = "Broj uzoraka",
+  cex = 1
+)
+```
+
+```{r, fig.width=10, fig.height=6}
+tectonic_setting_data <- as.data.frame(tectonic_setting_data)
+colnames(tectonic_setting_data) <- c("TECTONIC.SETTING", "COUNT")
+
+tectonic_setting_data$PERCENT <- round(tectonic_setting_data$COUNT / sum(tectonic_setting_data$COUNT) * 100, 2)
+tectonic_setting_data <- tectonic_setting_data[order(tectonic_setting_data$COUNT), ]
+tectonic_setting_data
+```
+
+5.  Након централних обележја скупа података потребно је осврнути се и на остала, хемијска обележја. Испод се налази помоћна променљива која се користи у деловима кода где је могуће приказати податке везане за само једно обележје.
+
+```{r}
+chemical_column <- "SIO2.WT"
+```
+
+6.  За почетак је потребно видети у ком проценту су недостајуће вредности заступљене у одабраном обележју.
+
+```{r, fig.width=10, fig.height=6}
+missing_values_counts <- table(is.na(cleaned_data[[chemical_column]]))
+
+labels <- c("NOT NA", "NA")
+colors <- c("green", "red")
+
+pie(
+  missing_values_counts,
+  labels = paste(labels, " (", round(100 * missing_values_counts / sum(missing_values_counts), 2), "%)"),
+  col = colors,
+  main = paste("Недостајуће вредности - ", chemical_column)
+)
+```
+
+7.  Затим, потребно је видети колико су недостајуће вредности одабраног обележја заступљене груписано по тектонским окружењима за поделу по обележју LAND.OR.SEA.
+
+```{r, fig.width=10, fig.height=5}
+missing_value_counts <- table(cleaned_data$LAND.OR.SEA, is.na(cleaned_data[[chemical_column]]))
+missing_value_counts <- prop.table(missing_value_counts, 1)
+missing_value_counts <- t(missing_value_counts)
+
+labels <- c("NOT NA", "NA")
+colors <- c("green", "red")
+
+barplot(
+  missing_value_counts,
+  col = colors,
+  legend = labels,
+  beside = FALSE,
+  las = 2,
+  cex.names = 0.625,
+  main = paste("Недостајуће вредности по тектонским окружењима - ", chemical_column),
+  ylab = "Проценат појава"
+)
+```
+
+7.  Исту информацију могуће је видети у табели испод, овај пут са конкретним бројевима појава.
+
+```{r, fig.width=10, fig.height=5}
+chemical_data <- tapply(cleaned_data[[chemical_column]], cleaned_data$LAND.OR.SEA, function(x) sum(!is.na(x)))
+chemical_data
+```
+
+8.  Затим, потребно је видети колико су недостајуће вредности одабраног обележја заступљене груписано по тектонским окружењима за поделу по обележју TECTONIC.SETTING.
+
+```{r, fig.width=10, fig.height=5}
+missing_value_counts <- table(cleaned_data$TECTONIC.SETTING, is.na(cleaned_data[[chemical_column]]))
+missing_value_counts <- prop.table(missing_value_counts, 1)
+rownames(missing_value_counts) <- ifelse(
+  nchar(rownames(missing_value_counts)) > 12,
+  paste0(substr(rownames(missing_value_counts), 1, 12), "..."),
+  rownames(missing_value_counts)
+)
+missing_value_counts <- t(missing_value_counts)
+
+labels <- c("NOT NA", "NA")
+colors <- c("green", "red")
+
+barplot(
+  missing_value_counts,
+  col = colors,
+  legend = labels,
+  beside = FALSE,
+  las = 2,
+  cex.names = 0.625,
+  main = paste("Недостајуће вредности по тектонским окружењима - ", chemical_column),
+  ylab = "Проценат појава"
+)
+```
+
+9.  Исту информацију могуће је видети на графику испод, овај пут са конкретним бројевима појава.
+
+```{r, fig.width=10, fig.height=5}
+chemical_data <- tapply(cleaned_data[[chemical_column]], cleaned_data$TECTONIC.SETTING, function(x) sum(!is.na(x)))
+chemical_data <- sort(chemical_data, decreasing = FALSE)
+
+dotchart(
+  chemical_data,
+  labels = names(chemical_data),
+  main = paste("Број појава - ", chemical_column),
+  xlab = "Број појава",
+  cex = 0.9
+)
+```
+
+10. Следеће што је потребно да се урадити је одређивање неких основних статистика. У табели испод су приказани минимум, максимум, просечна вредност, стандардна девијација и медијан за одабрано хемијско обележје.
+
+```{r}
+chemical_data <- cleaned_data[[chemical_column]]
+
+chemical_data_summary <- data.frame(
+  min = min(chemical_data, na.rm = TRUE),
+  max = max(chemical_data, na.rm = TRUE),
+  mean = mean(chemical_data, na.rm = TRUE),
+  sd = sd(chemical_data, na.rm = TRUE),
+  median = median(chemical_data, na.rm = TRUE)
+)
+chemical_data_summary
+```
+
+11. Исте информације налазе се у табели испод, али су овај пут груписано по тектонском окружењу (LAND.OR.SEA).
+
+```{r}
+chemical_data <- select(cleaned_data, LAND.OR.SEA, all_of(chemical_column))
+
+chemical_data_summary <- chemical_data %>%
+  group_by(LAND.OR.SEA) %>%
+  summarise(
+    min = min(.data[[chemical_column]], na.rm = TRUE),
+    max = max(.data[[chemical_column]], na.rm = TRUE),
+    mean = mean(.data[[chemical_column]], na.rm = TRUE),
+    sd = sd(.data[[chemical_column]], na.rm = TRUE),
+    median = median(.data[[chemical_column]], na.rm = TRUE),
+    .groups = "drop"
+  )
+
+chemical_data_summary
+```
+
+11. Исте информације налазе се у табели испод, али су овај пут груписано по тектонском окружењу (TECTONIC.SETTING).
+
+```{r}
+chemical_data <- select(cleaned_data, TECTONIC.SETTING, all_of(chemical_column))
+
+chemical_data_summary <- chemical_data %>%
+  group_by(TECTONIC.SETTING) %>%
+  summarise(
+    min = min(.data[[chemical_column]], na.rm = TRUE),
+    max = max(.data[[chemical_column]], na.rm = TRUE),
+    mean = mean(.data[[chemical_column]], na.rm = TRUE),
+    sd = sd(.data[[chemical_column]], na.rm = TRUE),
+    median = median(.data[[chemical_column]], na.rm = TRUE),
+    .groups = "drop"
+  )
+
+chemical_data_summary
+```
+
+12. Затим је потребно визуализовати расподелу вредности. На кутијастом графикону испод може се видети расподела вредности за одабрано обележје.
+
+```{r, fig.width=10, fig.height=5}
+chemical_data <- cleaned_data[[chemical_column]]
+
+boxplot(
+  chemical_data,
+  main = paste("Расподела вредности - ", chemical_column),
+  xlab = NA,
+  ylab = chemical_column,
+  las = 2,
+  cex.axis = 0.625
+)
+```
+
+11. Исте информације налазе се на кутијастом графикону испод, али су овај пут груписано по тектонском окружењу (LAND.OR.SEA).
+
+```{r, fig.width=10, fig.height=5}
+chemical_data <- select(cleaned_data, LAND.OR.SEA, all_of(chemical_column))
+chemical_data <- mutate(
+    chemical_data,
+    LAND.OR.SEA = ifelse(
+      nchar(as.character(LAND.OR.SEA)) > 12,
+      paste0(substr(as.character(LAND.OR.SEA), 1, 12), "..."),
+      as.character(LAND.OR.SEA)
+    )
+  )
+
+boxplot(
+  chemical_data[[chemical_column]] ~ chemical_data$LAND.OR.SEA,
+  main = paste("Расподела вредности - ", chemical_column),
+  xlab = NA,
+  ylab = chemical_column,
+  las = 2,
+  cex.axis = 0.625
+)
+```
+
+12. Исте информације налазе се на кутијастом графикону испод, али су овај пут груписано по тектонском окружењу (TECTONIC.SETTING).
+
+```{r, fig.width=10, fig.height=5}
+chemical_data <- select(cleaned_data, TECTONIC.SETTING, all_of(chemical_column))
+chemical_data <- mutate(
+    chemical_data,
+    TECTONIC.SETTING = ifelse(
+      nchar(as.character(TECTONIC.SETTING)) > 12,
+      paste0(substr(as.character(TECTONIC.SETTING), 1, 12), "..."),
+      as.character(TECTONIC.SETTING)
+    )
+  )
+
+boxplot(
+  chemical_data[[chemical_column]] ~ chemical_data$TECTONIC.SETTING,
+  main = paste("Расподела вредности - ", chemical_column),
+  xlab = NA,
+  ylab = chemical_column,
+  las = 2,
+  cex.axis = 0.625
+)
+```
+
+13. Расподелу вредности је могуће приказати и на другачији начин, употребом хистограма. На хистограму испод може се видети расподела вредности за одабрано обележје.
+
+```{r, fig.width=10, fig.height=5}
+h <- hist(cleaned_data[[chemical_column]], plot = FALSE)
+
+hist(
+  cleaned_data[[chemical_column]],
+  main = paste("Расподела вредности - ", chemical_column),
+  xlab = chemical_column,
+  ylab = "Број појава",
+  ylim = c(0, max(h$counts) * 1.2)
+)
+
+cor(cleaned_data$SIO2.WT,
+    cleaned_data$MGO.WT,
+    use = "complete.obs")
+```
+
+14. Након визуализације засебних обележја потребно је и испитати у каквом су међусобном односу. За почетак можемо утврдити какав је однос између различитих подела тектонских окружења (LAND.OR.SEA и TECTONIC.SETTING). На графикону испод можемо видети да већина класа из обележја TECTONIC.SETTING већински припада једној од класа из обележја LAND.OR.SEA. Само једна од 11 класа одступа од овог правила и донекле равномерно је подељена између копнених и морских тектонских окружења. Закључак који можемо извести из овога је да можда нема смисла користити оба обележја у оквиру класификационих модела јер имају јаку и очигледну међусобну везу.
+
+```{r, fig.width=10, fig.height=5}
+corealtions <- table(cleaned_data$TECTONIC.SETTING, cleaned_data$LAND.OR.SEA)
+corealtions <- prop.table(corealtions, 1)
+rownames(corealtions) <- ifelse(
+  nchar(rownames(corealtions)) > 12,
+  paste0(substr(rownames(corealtions), 1, 12), "..."),
+  rownames(corealtions)
+)
+corealtions <- t(corealtions)
+
+labels <- c("Land", "Sea")
+colors <- c("brown", "cyan")
+
+barplot(
+  corealtions,
+  col = colors,
+  legend = labels,
+  beside = FALSE,
+  las = 2,
+  cex.names = 0.625,
+  main = "Повезаност између LAND.OR.SEA и TECTONIC.SETTING",
+  ylab = "Број појава"
+)
+```
+
+15. За испитивање повезаности хемијских обележја израчуната је корелациона матрица. Вредности корелације су у опсегу од -1 до 1, где пожитивне вредности означавају да вредности расту заједно, а негативне да опадају заједно. На овај начин можемо утврдити да ли неке од хемијских колона носе сличну информацију у себи.
+
+```{r, fig.width=10, fig.height=5}
+corelations <- cor(cleaned_data[chemical_columns], use = "pairwise.complete.obs")
+corelations <- as.data.frame(as.table(corelations))
+corelations <- corelations[corelations$Var1 != corelations$Var2, ]
+
+corelations$key <- apply(corelations[, 1:2], 1, function(x) paste(sort(x), collapse = "_"))
+corelations <- corelations[!duplicated(corelations$key), ]
+corelations$key <- NULL
+
+corelations <- corelations[order(abs(corelations$Freq), decreasing = TRUE), ]
+
+colnames(corelations) <- c("Обележје 1", "Обележје 2", "Корелација")
+corelations
+```
+
+16. Ради лакшег фирлтрирања табеле, користимо помоћне променљиве да бисмо лакше пронашли корелацију која нас занима.
+
+```{r, fig.width=10, fig.height=5}
+chemical_column_1 <- "SIO2.WT"
+chemical_column_2 <- "AL2O3.WT"
+
+filter(
+  corelations,
+  (`Обележје 1` == chemical_column_1 & `Обележје 2` == chemical_column_2) |
+  (`Обележје 1` == chemical_column_2 & `Обележје 2` == chemical_column_1)
+)
+```
+
+## Класификација
+
+Након прелиминарне анализе података, може се почети са развијањем класификационих модела. У овој секцији приказана је класификација на основу 2 класификациона модела:
+
+1.  Decision Tree
+2.  Random Forest
+
+### Класификација - Decision Tree
+
+Испод је приказана функција коришћена за Decision Tree класификацију.
+
+```{r}
+run_decision_tree <- function(predictor_columns, cp, minsplit, minbucket, maxdepth, importance = TRUE, sea_weight = 1) {
+  library(caret)
+  library(rpart)
+
+  model_data <- cleaned_data[, c("LAND.OR.SEA", predictor_columns)]
+
+  model_data[predictor_columns] <- lapply(
+    model_data[predictor_columns],
+    function(x) {
+      x[is.na(x)] <- 0
+      x
+    }
+  )
+
+  set.seed(67)
+
+  cross_validation <- trainControl(
+    method = "cv",
+    number = 2,
+    classProbs = TRUE,
+    savePredictions = TRUE
+  )
+
+  decision_tree <- train(
+    LAND.OR.SEA ~ .,
+    data = model_data,
+    method = "rpart",
+    trControl = cross_validation,
+    tuneGrid = data.frame(cp = cp),
+    control = rpart.control(minsplit = minsplit, minbucket = minbucket, maxdepth = maxdepth),
+    weights = ifelse(model_data$LAND.OR.SEA == "LAND", 1, sea_weight)
+  )
+
+  if (importance) {
+    print(varImp(decision_tree))
+  }
+
+  print(decision_tree)
+
+  predictions <- decision_tree$pred
+  confusion_matrix_land <- confusionMatrix(predictions$pred, predictions$obs, positive = "LAND")
+  confusion_matrix_sea <- confusionMatrix(predictions$pred, predictions$obs, positive = "SEA")
+
+  accuracy <- confusion_matrix_land$overall["Accuracy"]
+
+  land_precision <- confusion_matrix_land$byClass["Pos Pred Value"]
+  land_sensitivity <- confusion_matrix_land$byClass["Sensitivity"]
+  land_f1 <- 2 * (land_precision * land_sensitivity) / (land_precision + land_sensitivity)
+
+  sea_precision <- confusion_matrix_sea$byClass["Pos Pred Value"]
+  sea_sensitivity <- confusion_matrix_sea$byClass["Sensitivity"]
+  sea_f1 <- 2 * (sea_precision * sea_sensitivity) / (sea_precision + sea_sensitivity)
+
+
+  cat("\nМатрица конфузије:")
+  print(confusion_matrix_land$table)
+
+  cat("\nТачност:", accuracy)
+
+  cat("\n\nLAND:")
+  cat("\nПрецизност:", land_precision)
+  cat("\nОсетљивост:", land_sensitivity)
+  cat("\nСкор Ф1:", land_f1)
+
+  cat("\n\nSEA:")
+  cat("\nПрецизност:", sea_precision)
+  cat("\nОсетљивост:", sea_sensitivity)
+  cat("\nСкор Ф1:", sea_f1)
+}
+```
+
+### Класификација - Decision Tree 1 (DT1)
+
+```{r}
+predictor_columns <- c(oxide_columns, trace_element_columns)
+
+run_decision_tree(
+  predictor_columns = predictor_columns,
+  cp = 0.0001,
+  minsplit = 20,
+  minbucket = 10,
+  maxdepth = 30
+)
+```
+
+### Класификација - Decision Tree 2 (DT2)
+
+```{r}
+predictor_columns <- c(oxide_columns, trace_element_columns)
+
+run_decision_tree(
+  predictor_columns = predictor_columns,
+  cp = 0.0001,
+  minsplit = 15,
+  minbucket = 5,
+  maxdepth = 30,
+  sea_weight = 3,
+  importance = FALSE
+)
+```
+
+### Класификација - Decision Tree 3 (DT3)
+
+```{r}
+predictor_columns <- c(
+  "TIO2.WT",
+  "NA2O.WT",
+  "AL2O3.WT",
+  "K2O.WT",
+  "SIO2.WT",
+  "BA.PPM",
+  "CAO.WT",
+  "MGO.WT",
+  "TH.PPM",
+  "SR.PPM",
+  "RB.PPM",
+  "NB.PPM",
+  "CL.WT",
+  "P2O5.WT",
+  "MNO.WT",
+  "LA.PPM",
+  "CE.PPM",
+  "CL.PPM",
+  "Y.PPM",
+  "FE2O3.WT"
+)
+
+run_decision_tree(
+  predictor_columns = predictor_columns,
+  cp = 0.0001,
+  minsplit = 15,
+  minbucket = 5,
+  maxdepth = 30,
+  sea_weight = 3,
+  importance = FALSE
+)
+```

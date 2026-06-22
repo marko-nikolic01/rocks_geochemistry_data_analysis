@@ -575,6 +575,7 @@ boxplot(
   cex.axis = 0.625
 )
 ```
+
 13. Расподелу вредности је могуће приказати и на другачији начин, употребом хистограма. На хистограму испод може се видети расподела вредности за одабрано обележје.
 
 ```{r, fig.width=10, fig.height=5}
@@ -619,8 +620,8 @@ barplot(
   ylab = "Број појава"
 )
 ```
-15. За испитивање повезаности хемијских обележја израчуната је корелациона матрица. Вредности корелације су у опсегу од -1 до 1, где пожитивне вредности означавају да вредности расту заједно, а негативне да опадају заједно. На овај начин можемо утврдити да ли неке од хемијских колона носе сличну информацију у себи.
 
+15. За испитивање повезаности хемијских обележја израчуната је корелациона матрица. Вредности корелације су у опсегу од -1 до 1, где пожитивне вредности означавају да вредности расту заједно, а негативне да опадају заједно. На овај начин можемо утврдити да ли неке од хемијских колона носе сличну информацију у себи.
 
 ```{r, fig.width=10, fig.height=5}
 corelations <- cor(cleaned_data[chemical_columns], use = "pairwise.complete.obs")
@@ -650,148 +651,16 @@ filter(
 )
 ```
 
+## Класификација
 
-Класификација
+Након прелиминарне анализе података, може се почети са развијањем класификационих модела. У овој секцији приказана је класификација на основу 2 класификациона модела:
 
-```{r}
-run_decision_tree <- function(predictor_columns, cp, minsplit, minbucket, maxdepth, importance = TRUE, sea_weight = 1) {
-  library(caret)
-  library(rpart)
+1.  Decision Tree
+2.  Random Forest
 
-  model_data <- cleaned_data[, c("LAND.OR.SEA", predictor_columns)]
+### Класификација - Random Forest
 
-  model_data[predictor_columns] <- lapply(
-    model_data[predictor_columns],
-    function(x) {
-      x[is.na(x)] <- 0
-      x
-    }
-  )
-
-  set.seed(67)
-
-  cross_validation <- trainControl(
-    method = "cv",
-    number = 2,
-    classProbs = TRUE,
-    savePredictions = TRUE
-  )
-
-  decision_tree <- train(
-    LAND.OR.SEA ~ .,
-    data = model_data,
-    method = "rpart",
-    trControl = cross_validation,
-    tuneGrid = data.frame(cp = cp),
-    control = rpart.control(minsplit = minsplit, minbucket = minbucket, maxdepth = maxdepth),
-    weights = ifelse(model_data$LAND.OR.SEA == "LAND", 1, sea_weight)
-  )
-
-  if (importance) {
-    print(varImp(decision_tree))
-  }
-
-  print(decision_tree)
-
-  predictions <- decision_tree$pred
-  confusion_matrix_land <- confusionMatrix(predictions$pred, predictions$obs, positive = "LAND")
-  confusion_matrix_sea <- confusionMatrix(predictions$pred, predictions$obs, positive = "SEA")
-
-  accuracy <- confusion_matrix_land$overall["Accuracy"]
-
-  land_precision <- confusion_matrix_land$byClass["Pos Pred Value"]
-  land_sensitivity <- confusion_matrix_land$byClass["Sensitivity"]
-  land_f1 <- 2 * (land_precision * land_sensitivity) / (land_precision + land_sensitivity)
-
-  sea_precision <- confusion_matrix_sea$byClass["Pos Pred Value"]
-  sea_sensitivity <- confusion_matrix_sea$byClass["Sensitivity"]
-  sea_f1 <- 2 * (sea_precision * sea_sensitivity) / (sea_precision + sea_sensitivity)
-
-
-  cat("\nМатрица конфузије:")
-  print(confusion_matrix_land$table)
-
-  cat("\nТачност:", accuracy)
-
-  cat("\n\nLAND:")
-  cat("\nПрецизност:", land_precision)
-  cat("\nОсетљивост:", land_sensitivity)
-  cat("\nСкор Ф1:", land_f1)
-
-  cat("\n\nSEA:")
-  cat("\nПрецизност:", sea_precision)
-  cat("\nОсетљивост:", sea_sensitivity)
-  cat("\nСкор Ф1:", sea_f1)
-}
-```
-
-Klasifikacija 4
-
-```{r}
-predictor_columns <- c(oxide_columns, trace_element_columns)
-
-run_decision_tree(
-  predictor_columns = predictor_columns,
-  cp = 0.0001,
-  minsplit = 20,
-  minbucket = 10,
-  maxdepth = 30
-)
-```
-
-Klasifikacija 5
-
-```{r}
-predictor_columns <- c(oxide_columns, trace_element_columns)
-
-run_decision_tree(
-  predictor_columns = predictor_columns,
-  cp = 0.0001,
-  minsplit = 15,
-  minbucket = 5,
-  maxdepth = 30,
-  sea_weight = 3,
-  importance = FALSE
-)
-```
-
-Klasifikacija 6
-
-```{r}
-predictor_columns <- c(
-  "TIO2.WT",
-  "NA2O.WT",
-  "AL2O3.WT",
-  "K2O.WT",
-  "SIO2.WT",
-  "BA.PPM",
-  "CAO.WT",
-  "MGO.WT",
-  "TH.PPM",
-  "SR.PPM",
-  "RB.PPM",
-  "NB.PPM",
-  "CL.WT",
-  "P2O5.WT",
-  "MNO.WT",
-  "LA.PPM",
-  "CE.PPM",
-  "CL.PPM",
-  "Y.PPM",
-  "FE2O3.WT"
-)
-
-run_decision_tree(
-  predictor_columns = predictor_columns,
-  cp = 0.0001,
-  minsplit = 15,
-  minbucket = 5,
-  maxdepth = 30,
-  sea_weight = 3,
-  importance = FALSE
-)
-```
-
+Испод је приказана функција коришћена за Random Forest класификацију.
 
 ```{r}
 run_random_forest <- function(predictor_columns, importance = TRUE, ...) {
@@ -862,7 +731,7 @@ run_random_forest <- function(predictor_columns, importance = TRUE, ...) {
 }
 ```
 
-Klasifikacija 1
+### Класификација - Random Forest 1 (RF1)
 
 ```{r}
 predictor_columns <- c(oxide_columns, trace_element_columns)
@@ -872,7 +741,8 @@ run_random_forest(
   ntree = 10
 )
 ```
-Klasifikacija 2
+
+### Класификација - Random Forest 2 (RF2)
 
 ```{r}
 predictor_columns <- c(oxide_columns, trace_element_columns)
@@ -885,7 +755,7 @@ run_random_forest(
 )
 ```
 
-Klasifikacija 3
+### Класификација - Random Forest 3 (RF3)
 
 ```{r}
 predictor_columns <- c(
@@ -918,8 +788,3 @@ run_random_forest(
   classwt = c(LAND = 1, SEA = 1.05)
 )
 ```
-
-
-
-
-
